@@ -550,3 +550,60 @@ Run against the live Gemini API on project `268175794480`. Full detail in §5.6.
 - ❌ **All previous quota numbers were deleted, not corrected.** They came from a different account's dashboard. RPM, TPM, RPD and RPD scoping are all **unknown** for this project; the account's AI Pro subscription may raise them above published free-tier figures.
 - ⚠️ **429 shape still unverified.** 5 concurrent requests to `flash-lite` did not trip a limit, so RPM is >5 concurrent. Retry timing remains undocumented — design for blind backoff.
 - **Measurement pending (yours):** read the `Gemini 2.5 Flash` and `Gemini 2.5 Flash-Lite` rows for project `268175794480`. Spend so far is 1 request to `flash` and 6 to `flash-lite` — the split tells us whether RPD is per-model or aggregate.
+
+---
+
+## 12. Design language — from the real app
+
+Reference screenshots in `docs/design-reference/` (the live **Seerat Ki Duniya** app — the Seerah app our widget is meant to live inside). Extracted 2026-08-12. **This section governs Phase 4. It is documentation, not a licence to start building UI.**
+
+### 12.1 What the reference actually looks like
+
+**One sentence:** warm, paper-like and unhurried — cream grounds instead of stark white, deep forest green for authority, gold for reverence, generous rounded geometry and a lot of breathing room. It reads as a modern learning app wearing the visual manners of Islamic devotional print: calm and respectful, never clinical and never "techy".
+
+**Palette** (sampled from the screenshots; treat as ±a shade, tune on device):
+
+| Role | Hex | Where it appears |
+|------|-----|------------------|
+| Background | `#F7F5F0` | every screen — a warm cream, **not** white |
+| Banded surface | `#F0ECE1` | timeline section headers, alternating strips |
+| Surface | `#FFFFFF` | cards, list items, chips |
+| Primary | `#14483A` | hero banners, "Enroll now", active tab, headings, stat numbers |
+| Primary (deep) | `#0F3D2E` | the darkest banner fills |
+| Gold | `#E0A63C` | "Continue" button, "Continue reading" label, logo dome |
+| Accent (high-emphasis CTA) | `#F5842C` | "See Details" — used **once per screen**, sparingly |
+| Text primary | `#1C1C1A` | titles, body |
+| Text secondary | `#82827A` | meta, labels, inactive tabs |
+| Divider / track | `#E6E2D8` | hairlines, progress tracks |
+
+Note the split: the **logo** is teal + gold, but the **UI** is green + gold. Follow the UI. Teal appears nowhere in the product chrome.
+
+**Typography.** English is a rounded geometric sans with double-storey `a` and soft terminals (Nunito/Quicksand family — match the characteristics, don't chase the exact licence). Screen titles ~23px bold; card titles ~18px semibold; body ~15–16px regular at ~1.55 line height; meta ~13px in secondary grey; stat numbers ~30px bold in primary green. Urdu is naskh, noticeably larger than the English at the same rank (Urdu needs ~1.15–1.25× the size and ~1.7 line height to stay legible), and `ﷺ` renders as a true calligraphic ligature — **their app does render U+FDFA**, which is a useful signal for our Phase 1(c) font check. English and Urdu are never mixed mid-sentence in chrome; the app switches wholesale via a **`UR / EN` pill toggle in the header**, which is the pattern we should copy for §7.1.
+
+**Spacing and shape.** 16–20px screen padding; 16px card radius, 12px on buttons and chips, 20px+ on hero banners; 16–20px card padding; 12–16px between cards. Elevation is almost flat — a barely-there shadow, and in places (profile stat cards) a **1px dashed border** instead of a shadow, which is a distinctive tic worth borrowing. Section headers are full-bleed tinted bands, not floating labels.
+
+**Components.** Header: large bold title, left-aligned on cream, hairline divider, optional circular icon buttons right. Bottom tab bar: 6 line icons + labels, active in primary green. Buttons: full-width, solid, 12px radius. Chips: white pill, thin border, green border when selected. List rows: white card, thumbnail left, title, meta line, thin progress bar. Icons: line style, ~1.75px stroke, rounded caps.
+
+### 12.2 Mapping onto our surfaces
+
+| Our surface | How it should sit in that language |
+|---|---|
+| **Chat screen** | Cream `#F7F5F0` ground, not white. Header matches theirs exactly — large bold title left, hairline divider, and the **`UR / EN` pill on the right**, reusing their toggle so language switching feels native rather than bolted on. |
+| **User message** | Primary green `#14483A` fill, white text, 16px radius with the bottom-right corner tightened to ~4px. Right-aligned in LTR; **mirrored in RTL** (§7.1). |
+| **Bot message** | White surface on cream, 16px radius, bottom-left tightened. Near-black text. Flat with a hairline `#E6E2D8` border rather than a shadow — the reference is flat, and a floating bubble would read as a different app. |
+| **Citation chip** | Their selected-chip pattern exactly: white pill, 10–12px radius, thin green border, primary-green label, ~13px. Sits directly under the bot message. Tapping expands the source card. Never more than a line of text — it is a handle, not the evidence. |
+| **Source card** | The list-row card, reused: white, 16px radius, 16px padding. Entry title at card-title weight; corpus text at body size in secondary-dark; hawala reference in `#82827A` meta. A 3px gold `#E0A63C` left rule marks it as quoted scripture — the one place gold earns its reverence connotation. Renders the language from `response.language`, never mixed (§5.4). |
+| **Refusal / alim redirect** | Same white bot bubble, no red, no warning iconography. This is a courtesy, not an error — a gold left rule and a calm line of text. Treating a refusal as an error state would misrepresent three of the four rubric behaviours. |
+| **Persistent disclaimer bar** | Pinned above the composer, full-bleed, banded surface `#F0ECE1` with a hairline top border, 12px secondary text, centred, non-dismissible. Deliberately the quietest element on the screen — permanently visible without competing with content. **See the conflict below.** |
+| **About / Corpus Rules screen** | Their settings-page idiom: cream ground, sectioned white cards. The verbatim `/meta` disclaimer and all five `usage_rules`, both `en` and `ur`, reproduced exactly (§4). Reached from a circular icon button in the chat header, matching their header-button pattern. |
+| **Empty / first-run state** | Centred derived mark, one line of orientation text, and 3–4 example questions as tappable chips — one in-corpus, one out-of-corpus, one ruling-shaped. This doubles as the demo script and shows the guardrails before a judge has to think of a question. |
+
+### 12.3 Two constraints, both binding
+
+**Match the language, not the assets.** Do **not** reproduce their logo. The mark is a gold dome-and-finial silhouette enclosing teal Urdu calligraphy; ours should sit in the same family — a single-weight gold line-drawn form on cream, geometric, unfussy — while being plainly a different mark. A dome outline enclosing a **chat/speech form** rather than calligraphy reads as the same house and says what this thing actually is. No calligraphic reproduction of their wordmark, and no lifting their PNG assets.
+
+**Where the reference and the rubric conflict, the rubric wins — and we note the conflict rather than dropping the requirement.** One real instance:
+
+> **The persistent disclaimer bar has no equivalent in their app.** Nothing in the reference is permanently pinned above the input; their screens are clean, content-first, and unchromed. A persistent bar is therefore *off-style by construction*. It ships anyway — `usage_rules[5]` requires it and it is one of the four demo behaviours (§2). We reduce the friction by making it the quietest thing on screen (banded surface, secondary text, hairline rule), **not** by making it dismissible, collapsible, or shown-once. If it ever comes down to "it looks cleaner without it", it stays.
+
+Smaller conflicts to expect: the reference uses orange for its one high-emphasis CTA per screen, but our chat surface has no such CTA — **do not** find a use for orange just to match; leaving it unused is correct. And the reference renders `576.577` raw in its own timeline (screen 2) — we render `576–577 CE` (§ Phase 1a). Matching their design language does not mean inheriting their data bugs.
