@@ -2,6 +2,7 @@
   "expo": {
     "name": "Seerathon",
     "slug": "seerathon-ai-bot",
+    "owner": "muhammad-ali-abbas",
     "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,7 +25,10 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "//": "NOTHING SENSITIVE HERE — Expo's extra block ships inside the bundle (CLAUDE.md §5.4). Only the backend URL may live here, via EXPO_PUBLIC_."
+      "//": "NOTHING SENSITIVE HERE — Expo's extra block ships inside the bundle (CLAUDE.md §5.4). Only the backend URL may live here, via EXPO_PUBLIC_.",
+      "eas": {
+        "projectId": "d09145a8-6c14-43be-bdbb-b66be37f3eb0"
+      }
     }
   }
 }
