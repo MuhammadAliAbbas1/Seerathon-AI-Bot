@@ -1,0 +1,11 @@
+{
+  "name": "seerathon-ai-bot",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "corpus:sync": "node scripts/corpus-sync.mjs"
+  }
+}
