@@ -1,0 +1,10 @@
+HTTP/1.1 204 No Content
+Server: nginx/1.24.0 (Ubuntu)
+Date: Tue, 11 Aug 2026 15:35:09 GMT
+Content-Length: 0
+Connection: keep-alive
+X-Powered-By: Express
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET,HEAD,PUT,PATCH,POST,DELETE
+Vary: Access-Control-Request-Headers
+

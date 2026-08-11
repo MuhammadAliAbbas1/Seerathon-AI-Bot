@@ -232,8 +232,8 @@ Do not build these. Do not suggest them. If I ask for one, remind me it's on thi
 
 ## 10. Current status
 
-- [ ] **Phase 0 — Recon.** API probed, real response shapes documented in `recon/`. ← we are here
-- [ ] Phase 1 — Corpus fetch + cache. **Also: throwaway EAS hello-world APK build to de-risk the pipeline.**
+- [x] **Phase 0 — Recon.** API probed, real response shapes documented in `recon/`. See §11 for answers and the corrections it forced.
+- [ ] Phase 1 — Corpus fetch + cache. ← we are here **Also: throwaway EAS hello-world APK build to de-risk the pipeline.**
 - [ ] Phase 2 — Guardrail router (3-way classification)
 - [ ] Phase 3 — Answer path + citation validation
 - [ ] Phase 3.5 — Deploy backend, app talks to live endpoint
@@ -245,14 +245,23 @@ Do not build these. Do not suggest them. If I ask for one, remind me it's on thi
 
 ---
 
-## 11. Open questions — to be resolved in Phase 0
+## 11. Open questions — resolved in Phase 0
 
-These are unknown. Do not guess at them; find out and update this file.
+Answered by recon on 2026-08-11. Full evidence and raw responses in `recon/` — `recon/README.md` is the writeup.
 
-- ~~**API host.**~~ Resolved: `api.islamicdesk.com`. Still verify the full path joins correctly (see section 4).
-- **Auth.** Does the corpus API require a key or token?
-- **CORS.** Does the API allow browser-origin requests? If not, all corpus calls must be proxied server-side. This affects the surface architecture, so find out in Phase 0, not Phase 4.
-- **Language of the corpus.** Is the content English, Urdu, Arabic, transliterated, or mixed? This directly affects section 7.1.
-- **What `q=` actually does.** Substring match, or something smarter?
-- **Real entry counts.** Does `limit=120` return 120? What does `/meta` report?
-- **Submission requirements.** Repo? Live URL? Video? Deadline?
+- ~~**API host.**~~ **Resolved:** base URL is `https://api.islamicdesk.com/api/seerathon/corpus`, exactly as the brief states. The fallback path `/seerathon/corpus` 404s.
+- ~~**Auth.**~~ **Resolved: none required** — anonymous GETs return 200. ⚠️ **Sending any `Authorization` header returns 403 `"Token Unauthorized!"`.** Never attach one to corpus requests. (`X-Api-Key` is ignored harmlessly.)
+- ~~**CORS.**~~ **Resolved: fully open.** `Access-Control-Allow-Origin: *`; `OPTIONS` preflight returns 204. No proxy needed for corpus access. We still proxy the LLM call server-side per §5.4 — that constraint is about our key, not theirs.
+- ~~**Language of the corpus.**~~ **Resolved: fully bilingual, parallel `en`/`ur` blocks on every entry**, with inline Arabic phrases, the ﷺ glyph, and roman-Urdu in `slug.romanUrdu` + `keywords[]`. Coverage: titles 154/154 in both languages; shamail `hadeesTarjama` 113/120 in both; timeline `content[]` 34/34 in both. **§7.1 is cheap and well-supported — we select a language block, we never translate.**
+- ~~**What `q=` actually does.**~~ **Resolved: case-insensitive literal substring over a limited field set** — `title`, `hadeesTarjama`, `keywords[]`, and timeline `content[].title`. Not tokenised (`"revenge blasphemy"` → 0 hits), no fuzzy matching. **It does NOT search `points[]` or timeline `content_text`** — the bulk of the prose is invisible to it. Server-side search is not a usable retrieval mechanism; this reinforces §4B.
+- ~~**Real entry counts.**~~ **Resolved: shamail 120, timeline 34, courses 20.** `limit=120` returns all 120 shamail in one request; `limit=500` clamps silently to 120. **The whole answer corpus is 154 entries in 2 requests.** Timeline is 34, not the ~50 §4B assumed. Rate limit: 60 req/min/IP.
+- **Submission requirements.** ⛔ **STILL UNANSWERED — not discoverable from the API.** Repo? Live URL? Video? Deadline? Ask the organizers; this gates Phase 7.
+
+### Corrections to this file that recon forced
+
+- **§5.4 endpoint contract is wrong about ids.** It shows `"id": 47`. Real ids are **24-char hex ObjectId strings** (`"672b3e8ed458540020750eab"`). Slugs are **not** unique (150 distinct across 154 entries) — cite by `id` only. Fix before Phase 3.
+- **§4B's size estimate was low.** Not 30–40k tokens. Measured (estimates, ±25%): **English only, no hikayat ≈ 46k**; bilingual ≈ **122k**; bilingual + `include_hikayat` ≈ **280k — exceeds a 200k window.** The no-RAG decision survives via a two-pass approach: a bilingual routing index over all 154 entries costs **~9.7k tokens**, then fetch full text for the few candidate ids. Still no vector DB, no embeddings, no chunking. **Recommended, not decided — see `recon/README.md`.**
+- **Errors come back as HTTP 200** with `{"error": true, "data": null, "msg": "..."}`. Status codes are useless here; always branch on `body.error`.
+- **§4A confirmed correct.** The brief contradicts itself on courses; the API settles it in two places — `/meta` `usage_rules[0]` ("Answer only from this corpus (Shamail + Seerah Timeline)") and `/courses` `data.note` ("Courses index only… Use Shamail + Timeline as the answer corpus"). No course body content exists in the API to answer from.
+- **One entry is empty:** `67824f4d53748aebf74997ab` has titles in both languages and no body text in either. "Entry exists" ≠ "entry has content" — the answer path must check.
+- **Open for Phase 4:** the `/meta` disclaimer string is addressed to the *bot builder* ("Cite every answer…", "Refuse fatwa questions…"), not the end user. §4 says render it verbatim. Rendering it as the in-chat persistent disclaimer would read as leaked system prompt. Suggested: show it verbatim in an about/rules affordance *and* a short user-facing disclaimer in the chat surface. Your call.
