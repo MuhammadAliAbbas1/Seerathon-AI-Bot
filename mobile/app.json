@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Seerathon",
+    "slug": "seerathon-ai-bot",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.muhammadaliabbas.seerathon"
+    },
+    "android": {
+      "package": "com.muhammadaliabbas.seerathon",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "//": "NOTHING SENSITIVE HERE — Expo's extra block ships inside the bundle (CLAUDE.md §5.4). Only the backend URL may live here, via EXPO_PUBLIC_."
+    }
+  }
+}
