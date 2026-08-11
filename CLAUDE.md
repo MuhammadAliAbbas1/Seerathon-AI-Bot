@@ -153,6 +153,21 @@ Guardrail router  ← classify BEFORE answering
 
 The router runs **first**, before any answer generation. This ordering is the design. Do not restructure it so that answering happens first and gets filtered afterwards.
 
+#### Fail-closed IS the guarantee, not a backup
+
+Gemini's `responseSchema` **does not enforce compliance** — the docs support an `enum` but state the model "is not guaranteed to strictly comply… always validate values in your application" (§5.6). We therefore have **no API-level guarantee** that `mode` comes back as one of our three values.
+
+That promotes the fail-closed path from a safety net to **the actual mechanism**. In code, after every router call:
+
+```
+mode ∈ { in_corpus, out_of_corpus, ruling_seeking } ?  → proceed
+anything else                                        → out_of_corpus
+```
+
+"Anything else" is not hypothetical. It includes an off-enum string, a missing field, malformed JSON, **empty `candidates`** (Gemini does not return blocked content), `finishReason: SAFETY`, `finishReason: MAX_TOKENS` truncating the JSON mid-object, a 429, and a network timeout. Every one of those lands on `out_of_corpus` — the safe fallback — and **never throws**, because an unhandled exception on stage is indistinguishable from a crash.
+
+**Required test, and it is not optional:** feed the router layer a malformed and an off-enum response and assert it returns `out_of_corpus` rather than throwing. This path is now load-bearing and **an untested fallback path fails on stage** — which is the only place it will ever be exercised under pressure. Fixtures (§5.6) make this cheap: record one real response, hand-edit copies into the broken shapes, replay offline forever.
+
 ### 5.3 Citation validation (the key safety mechanism)
 
 The model returns JSON: `{ answer, citations: [entry_id, ...] }`.
@@ -214,6 +229,13 @@ All guardrail logic, routing, and citation validation live server-side. A modifi
 
 Every field on a citation is read from the **cached corpus after validation**, never copied from the model's output — the model supplies an id and nothing else. `title` and `text` come from the same language block as `language`, so a source card can never mix scripts.
 
+**Design rule: the model never generates corpus text.** The `answer` is always the model's **own words** — framing, connecting, summarising. Verbatim corpus material (hadith translations, hawala references, timeline prose) is **only ever read from the cache and rendered in the source card**, never produced by the model. This is deliberate and does double duty:
+
+1. **It is the rubric shape.** "Answer, with a citation to the exact source entry" is answer *plus* citation — a bot that simply regurgitates the passage has not answered, it has quoted.
+2. **It avoids Gemini's `recitation` block.** `recitation` is a documented generation-block reason (§5.6), and a bot whose job is reproducing corpus material is exactly the profile that filter targets. If the model never emits the passage, the filter has nothing to fire on. A blocked response mid-demo would be indistinguishable from a crash.
+
+Consequence for prompting: the answer-path prompt must instruct paraphrase-and-cite, and **must not** ask the model to quote. If an answer needs the exact wording, that is what the source card is for. Test case in `tests/adversarial.md`: a question whose natural answer *is* a passage.
+
 Citations carry their text so the app renders a source card with no second request.
 
 `citations` is `[]` for `out_of_corpus` and `ruling_seeking`. A non-empty `citations` array on those modes is a bug.
@@ -253,29 +275,47 @@ Approach: cheap keyword prefilter, then LLM confirmation. Err heavily toward ref
 
 ### 5.6 Provider adapter, quota strategy, and fixture testing
 
-Verified against the Gemini docs on 2026-08-11. Where a behaviour could not be confirmed, it says so — do not fill those gaps by analogy with another provider.
+Docs read 2026-08-11; models and key verified against the live API 2026-08-12. Where a behaviour could not be confirmed, it says so — **do not fill those gaps by analogy with another provider, and do not reinstate numbers from an earlier draft.**
+
+#### Project, key, and models — all verified against the live API
+
+**Google Cloud project `268175794480`.** The account carries a **Google AI Pro subscription**, so free-tier published figures do not necessarily apply to us.
+
+| Role | Exact model ID | Status | Verified |
+|------|----------------|--------|----------|
+| **Answering** | `gemini-2.5-flash` | **stable** (no `-preview` suffix) | ✅ 200, 2026-08-12 |
+| **Routing** | `gemini-2.5-flash-lite` | **stable** | ✅ 200, 2026-08-12 |
+
+`GET /v1beta/models` returns IDs prefixed `models/` (e.g. `models/gemini-2.5-flash`); the request path is `/v1beta/models/{bare-id}:generateContent`. Use the bare id in code.
+
+⚠️ **Listed ≠ callable.** These same two models return **404 "no longer available to new users"** on a *different, newer* project — the restriction is by project age, not a shutdown. `GET /models` lists them regardless. **Never infer availability from the model list; call the model.** A startup smoke-check that both ids return 200 belongs in the deploy path.
+
+🔑 **A stale `GEMINI_API_KEY` exists in the ambient shell environment. It belongs to a different Google account and a different project. NEVER use it.** The live key is in `.env` at the repo root (gitignored since the first commit). Any code or script that reads `process.env.GEMINI_API_KEY` without explicitly loading `.env` first will silently authenticate as the wrong account — this has already happened once. Load `.env` explicitly; do not fall back to the ambient value.
 
 #### The scarce resource is REQUESTS, not tokens or money
 
-Free-tier limits are **per project, not per API key** (confirmed), and **per model** — so a two-model pipeline draws on two independent buckets. Measured on our dashboard:
+Rate limits are **per project, not per API key** (confirmed in docs) and appear to be **per model**, so a two-model pipeline should draw on two independent buckets.
 
-| Model | RPM | TPM |
-|-------|-----|-----|
-| `gemini-2.5-flash` (answers) | 5 | 250K |
-| `gemini-2.5-flash-lite` (routes) | 10 | 250K |
-| `gemini-3-flash-preview` | 5 | 250K |
+⚠️ **ALL NUMERIC LIMITS ARE CURRENTLY UNVERIFIED FOR THIS PROJECT.** An earlier draft of this file carried RPM/TPM/RPD figures read from a *different Google account's* dashboard; they described neither this project nor these models and have been deleted rather than adjusted. Do not design against remembered numbers.
 
-**TPM is not a binding constraint** — the full bilingual corpus (~122k) fits inside one call, and we send ~11k. Design against **RPM and RPD**.
+| Quantity | Status |
+|----------|--------|
+| RPM per model | **unknown** — 5 concurrent requests to `gemini-2.5-flash-lite` did **not** trip a 429, so it is >5 concurrent |
+| TPM per model | **unknown** |
+| RPD, and whether it is per-model or project-wide | **unknown** |
+| 429 response body / retry timing | **unverified** — could not trip one; docs document neither `Retry-After` nor `retryDelay` |
 
-Consequences that shape the architecture:
+**To measure:** read the **`Gemini 2.5 Flash`** and **`Gemini 2.5 Flash-Lite`** rows in AI Studio for project `268175794480` and record RPM / TPM / RPD for each. Known spend against this project so far: **1 request to `gemini-2.5-flash`, 6 to `gemini-2.5-flash-lite`**, plus one `GET /models` — if the two models' daily counters differ by that split, RPD is per-model; if a single aggregate moved by 7, it is project-wide.
 
-- **The second call is free in RPM terms.** Throughput is `min(10, 5)` = 5 questions/min — identical to a single call, because the answering model is the bottleneck either way.
+Architecture consequences that hold regardless of the exact numbers:
+
 - **Refusals cost one request, not two.** If the router returns `out_of_corpus` or `ruling_seeking` there is no second call. Three of four rubric behaviours are refusals, and adversarial suites are mostly hostile questions.
-- ⚠️ **Whether RPD is per-model or a project-wide aggregate is UNCONFIRMED.** The docs scope rate limits to the project but never scope RPD across models; third-party sources contradict each other. Assume a pessimistic **~100/day project-wide** until measured. To settle it: note the RPD counter, fire ~10 requests at `flash-lite` only, re-read. Independent counters ⇒ per-model.
-- ❌ **Context caching is NOT available on free tier** (pricing lists it "Not available"). The ~9.7k routing index is reprocessed every call. On free tier that costs nothing in money or quota — only latency.
-- ⚠️ **Free-tier inputs are used to improve Google products** (paid tier: they are not). Judges' questions at a public religious-content demo would be training data. This is a §2-shaped concern and the strongest single argument for enabling billing.
+- **The second call is close to free in RPM terms** *if* buckets are per-model, since the answering model is the bottleneck either way. Re-check once RPM is measured.
+- **TPM is unlikely to bind.** Both models accept 1,048,576 input tokens and we send ~11k.
+- ⚠️ **Free-tier inputs are used to improve Google products** (paid tier: they are not). Judges' questions at a public religious-content demo would be training data. Whether the AI Pro subscription changes this **needs checking** — it is a §2-shaped concern, not a privacy footnote.
+- ❌ **Context caching is listed as unavailable on free tier.** Whether AI Pro changes that is **unchecked**. Assume the ~9.7k routing index is reprocessed every call; on free tier that costs latency, not money or quota.
 
-**Billing recommendation: enable it.** Paid `gemini-2.5-flash` is $0.30/1M in, $2.50/1M out ≈ **$0.005/question**; the entire project runs to about **$5**. It removes the quota constraint, flips the data-usage flag, and takes effect instantly. **Build the machinery below anyway** — it earns its place on speed and outage-resilience regardless of tier.
+**Decision: stay on free tier for now, no billing.** Fixtures and response caching (below) are therefore **load-bearing, not optional**. The escape hatch exists and is cheap — **Free → Tier 1 needs only billing enabled, takes effect instantly, and costs roughly $5 for this entire project** at $0.30/1M in and $2.50/1M out (~$0.005/question). Reach for it the moment quota becomes the bottleneck; do not architect around not having it.
 
 #### Gemini failure modes — none of these may crash the demo
 
@@ -445,3 +485,14 @@ Phase 0 changed real decisions rather than just filling gaps. Each is now writte
 - **§7.1 — Urdu promoted to core path.** Parallel `en`/`ur` on every entry means selection, not translation, which deletes translation-quality risk on religious content.
 
 **Nothing remains open from the original Phase 0 list.** New open questions raised *by* recon, to settle in their phases: whether roman-Urdu questions get Urdu-script or roman-Urdu answers (§7.1, lean Urdu script), and the exact wording of the short user-facing disclaimer (§4, Phase 4).
+
+### Provider verification, 2026-08-12
+
+Run against the live Gemini API on project `268175794480`. Full detail in §5.6.
+
+- ✅ **`gemini-2.5-flash` and `gemini-2.5-flash-lite` are both callable** on this project. Both stable. Model selection settled.
+- ⚠️ **Model availability is project-scoped and `GET /models` lies about it.** Both models return **404 "no longer available to new users"** on a newer project while still being listed by the models endpoint. Availability must be verified by *calling*, never by listing.
+- 🔑 **A stale `GEMINI_API_KEY` sits in the ambient shell environment**, belonging to a different account and project. The live key is in `.env`. Anything reading `process.env` without loading `.env` first authenticates as the wrong account — this already happened once and spent ~7 requests on the wrong project.
+- ❌ **All previous quota numbers were deleted, not corrected.** They came from a different account's dashboard. RPM, TPM, RPD and RPD scoping are all **unknown** for this project; the account's AI Pro subscription may raise them above published free-tier figures.
+- ⚠️ **429 shape still unverified.** 5 concurrent requests to `flash-lite` did not trip a limit, so RPM is >5 concurrent. Retry timing remains undocumented — design for blind backoff.
+- **Measurement pending (yours):** read the `Gemini 2.5 Flash` and `Gemini 2.5 Flash-Lite` rows for project `268175794480`. Spend so far is 1 request to `flash` and 6 to `flash-lite` — the split tells us whether RPD is per-model or aggregate.
