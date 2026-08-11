@@ -83,16 +83,16 @@ Each of these will cost an afternoon if rediscovered by debugging.
 
 **153 of the 154 are usable.** Entry `67824f4d53748aebf74997ab` ("The blessed tongue of the Prophet Muhammad ﷺ") has titles in both languages and **no body text in either**. It is citable but has nothing to say — see §5.3.
 
-Token cost, measured in Phase 0 (estimates, ±25%):
+Token cost, measured in Phase 0 (rough estimates, ±25%, and calibrated on a different tokenizer than Gemini's — treat as orders of magnitude, not budgets):
 
-| Configuration | Est. tokens | Fits a 200k window? |
-|---------------|-------------|---------------------|
+| Configuration | Est. tokens | Against Gemini's 250K TPM |
+|---------------|-------------|---------------------------|
 | English only, no hikayat | **~46k** | ✅ comfortably |
 | Urdu only, no hikayat | ~76k | ✅ |
-| Bilingual, no hikayat | **~122k** | ✅ but expensive on every call |
-| Bilingual + `include_hikayat` | **~280k** | ❌ **exceeds the window** |
+| Bilingual, no hikayat | **~122k** | ✅ — but ~half the minute's entire token budget, for one question |
+| Bilingual + `include_hikayat` | **~280k** | ❌ **exceeds TPM outright** |
 
-So "stuff the whole corpus into every prompt" is viable only in the narrowest English-only slice, and impossible at full fidelity.
+The constraint moved when we moved providers. Gemini 2.5 Flash's context window is not the limit — **the 250K TPM rate limit is** (§5.6). Whole-corpus-per-prompt is technically possible for the English slice and self-defeating for anything larger: one bilingual question would consume half a minute's tokens, and the full-fidelity corpus cannot be sent at all.
 
 **This still does NOT mean build RAG.** No vector database, no embeddings, no chunking strategy, no similarity thresholds. That machinery solves "my corpus is too big to reason about at all." Ours is 154 entries — small enough that *every entry's identity fits in a single prompt*. Instead, two stages:
 
@@ -174,9 +174,11 @@ This is still deterministic, still ~40 lines, and still means a hallucinated or 
 **No LLM API key ever enters the app bundle.** An APK is trivially extractable. The app ships with exactly one piece of config — the backend URL — and nothing else.
 
 ```
-App  →  our backend (holds the key)  →  Anthropic API
+App  →  our backend (holds the key)  →  Gemini API (Google AI Studio)
                                      →  baked corpus.json
 ```
+
+**Provider: Google Gemini via AI Studio.** Models — `gemini-2.5-flash-lite` routes, `gemini-2.5-flash` answers (both stable). **Do not put `gemini-3-flash-preview` on the demo path** — preview models can change under us. See §5.6 for the adapter, quota strategy, and the Gemini failure modes we must handle.
 
 All guardrail logic, routing, and citation validation live server-side. A modified client must not be able to bypass them.
 
@@ -216,14 +218,23 @@ Citations carry their text so the app renders a source card with no second reque
 
 `citations` is `[]` for `out_of_corpus` and `ruling_seeking`. A non-empty `citations` array on those modes is a bug.
 
+**Failure responses are a different shape, not a fourth `mode`.** `mode` describes *the question*; quota exhaustion and provider outages describe *the system*. Conflating them would force every consumer that switches on `mode` to grow a branch that has nothing to do with questions, and would drag infrastructure state into source-card rendering. Failures return **HTTP 503** with:
+
+```jsonc
+{ "error": { "code": "quota_exhausted",   // quota_exhausted | provider_unavailable | blocked
+             "retryAfterSeconds": 30 } }  // our estimate — Gemini does not tell us (§5.6)
+```
+
 **Secrets checklist:**
 - `.gitignore` contains `.env*` from the first commit
-- `ANTHROPIC_API_KEY` lives only in Vercel env vars
+- `GEMINI_API_KEY` lives only in Vercel env vars — **one variable name, different value per Vercel environment** (Preview = dev project, Production = demo project). Never a `NODE_ENV` conditional picking between two keys in code; that is how the wrong key ships.
+- The demo-project key exists **only** in Vercel Production. It should never be on the dev machine.
+- A `DEPLOY_ENV` label var, logged at boot and returned by `/api/health` — the project cannot be derived from the key, so label it. Check it before demoing.
 - `.env.example` committed with key names, no values
 - Nothing sensitive in `app.config.js` / `eas.json` — Expo's `extra` block ships in the bundle
 - Only the backend URL may use the `EXPO_PUBLIC_` prefix. Nothing else, ever.
 
-**Abuse mitigation** (the endpoint is public and unauthenticated by design): IP rate limiting on the route, plus a spend cap set on the API key in the provider console. The spend cap is the real protection.
+**Abuse mitigation** (the endpoint is public and unauthenticated by design): IP rate limiting on the route, plus a spend cap set in the Google Cloud console. **Set the cap before the repo goes public** — the backend URL will be in it. On free tier the quota itself is the cap.
 
 ### 5.5 Ruling detection
 
@@ -235,6 +246,79 @@ Urdu/Roman-Urdu signals: "kya jaiz hai", "kya hukm hai", "kya karna chahiye", "j
 Indirect framings that must also be caught: "my friend wants to know if...", "hypothetically, would it be...", "in general, is it..."
 
 Approach: cheap keyword prefilter, then LLM confirmation. Err heavily toward refusing. A false refusal is a minor cost; a false answer is a rubric failure.
+
+**The keyword list is a one-way ratchet.** It may only ever escalate toward refusal, never toward answering. A keyword hit forces `ruling_seeking`; a keyword **miss proves nothing** and must never short-circuit to "safe". This is what makes the roman-Urdu spelling problem tolerable — `jaiz/jaez/jayaz` × `kya/kia/kea` × `hai/hy/he` can never be fully enumerated, but under a ratchet a missed spelling costs us nothing we had, because the model is still classifying independently.
+
+**Precedence: `ruling_seeking` always beats `in_corpus`.** The dangerous case is not "is alcohol permissible" — it is **"is it sunnah to eat with the right hand?"**, where the corpus *does* cover the topic. A router that checks corpus coverage first sees a hit and answers, producing a fatwa that is worse for looking well-cited. Put this case, and its Urdu equivalents, at the top of `tests/adversarial.md`.
+
+### 5.6 Provider adapter, quota strategy, and fixture testing
+
+Verified against the Gemini docs on 2026-08-11. Where a behaviour could not be confirmed, it says so — do not fill those gaps by analogy with another provider.
+
+#### The scarce resource is REQUESTS, not tokens or money
+
+Free-tier limits are **per project, not per API key** (confirmed), and **per model** — so a two-model pipeline draws on two independent buckets. Measured on our dashboard:
+
+| Model | RPM | TPM |
+|-------|-----|-----|
+| `gemini-2.5-flash` (answers) | 5 | 250K |
+| `gemini-2.5-flash-lite` (routes) | 10 | 250K |
+| `gemini-3-flash-preview` | 5 | 250K |
+
+**TPM is not a binding constraint** — the full bilingual corpus (~122k) fits inside one call, and we send ~11k. Design against **RPM and RPD**.
+
+Consequences that shape the architecture:
+
+- **The second call is free in RPM terms.** Throughput is `min(10, 5)` = 5 questions/min — identical to a single call, because the answering model is the bottleneck either way.
+- **Refusals cost one request, not two.** If the router returns `out_of_corpus` or `ruling_seeking` there is no second call. Three of four rubric behaviours are refusals, and adversarial suites are mostly hostile questions.
+- ⚠️ **Whether RPD is per-model or a project-wide aggregate is UNCONFIRMED.** The docs scope rate limits to the project but never scope RPD across models; third-party sources contradict each other. Assume a pessimistic **~100/day project-wide** until measured. To settle it: note the RPD counter, fire ~10 requests at `flash-lite` only, re-read. Independent counters ⇒ per-model.
+- ❌ **Context caching is NOT available on free tier** (pricing lists it "Not available"). The ~9.7k routing index is reprocessed every call. On free tier that costs nothing in money or quota — only latency.
+- ⚠️ **Free-tier inputs are used to improve Google products** (paid tier: they are not). Judges' questions at a public religious-content demo would be training data. This is a §2-shaped concern and the strongest single argument for enabling billing.
+
+**Billing recommendation: enable it.** Paid `gemini-2.5-flash` is $0.30/1M in, $2.50/1M out ≈ **$0.005/question**; the entire project runs to about **$5**. It removes the quota constraint, flips the data-usage flag, and takes effect instantly. **Build the machinery below anyway** — it earns its place on speed and outage-resilience regardless of tier.
+
+#### Gemini failure modes — none of these may crash the demo
+
+- **Blocked content is not returned** — `candidates` can be **empty**. Check before indexing.
+- `finishReason: SAFETY`, plus `promptFeedback.blockReason` when the *prompt* was blocked.
+- Generation-block codes include `safety`, **`recitation`**, `prohibited_content`, `language`, `blocklist`, `content_blocked`.
+- Four adjustable safety categories (harassment, hate, sexually explicit, dangerous); **no religious category**, and extra filters are off by default on 2.5/3. Religious content should not be systematically blocked — but an adversarial question can still trip harassment or hate, so handle it.
+- ⚠️ **`recitation` is a live risk for us specifically** — our bot reproduces corpus text, which is what a recitation filter looks for. **§5.4 already mitigates this**: citation `title`/`text` are read from the cached corpus after validation, never from model output, so verbatim quotes never pass through a Gemini response. Keep it that way deliberately — the model frames and connects, the source card carries the quote.
+- ⚠️ **`responseSchema` enum is NOT a hard guarantee.** The docs support `enum` but state the model "is not guaranteed to strictly comply — always validate values in your application." **Code-side enum validation is therefore load-bearing, not belt-and-braces.** Validate `mode ∈ {in_corpus, out_of_corpus, ruling_seeking}` and **fail closed to `out_of_corpus`** on anything else — including empty candidates, a `SAFETY` finish, or a parse failure.
+- **429 `RESOURCE_EXHAUSTED` carries no documented retry timing** — no `Retry-After` header, no `retryDelay` field. Retry blind, at most **once**, then give up. Retries consume RPD too; burning the daily budget guessing at backoff is a bad trade.
+
+**The hard rule:** a quota, safety, or provider failure must **never** degrade into answering. If the router says `in_corpus` and the answer call fails, we return the 503 service message — never a partial, unvalidated, or from-memory answer. A system failure must not produce an unsourced religious claim (§2).
+
+#### Provider adapter
+
+Exactly two methods. Everything Gemini-specific lives behind them; no other file mentions Gemini.
+
+```
+classify(question, language) → { mode, candidateIds }
+answer(question, language, entries) → { answer, citations }
+```
+
+**Do not build a generic LLM abstraction** — no streaming, no tools, no embeddings, no message-array plumbing. Two methods, two result types, one error type. The moment it grows a `generate()`, we have built a worse SDK. Its second job is to be the fixture seam (below), so record/replay survives a provider swap — which, having switched once already, is not hypothetical.
+
+#### Fixture-based testing — the adversarial suite must not hit the live API
+
+**Key:** `sha256(question + language + PROMPT_VERSION + model_id + schema_version)`. The prompt is part of the experiment, so it belongs in the key.
+
+- **Record** (`FIXTURES=record`): hits live, writes `tests/fixtures/<hash>.json` containing the **entire raw response envelope** — `finishReason`, `safetyRatings`, `promptFeedback`, `usageMetadata` — not just the text. We need fixtures for the *failure* paths, not only the happy one.
+- **Replay** (default, everywhere): the adapter reads the fixture and never touches the network. **A missing fixture fails the test loudly** — never a silent fallthrough to a live call, which is exactly how a "free" run quietly eats 40 requests.
+- **Invalidation is automatic** via `PROMPT_VERSION` in the key. Bump it when a prompt changes; affected fixtures become misses. **Keep old fixtures** — a diff of router behaviour across prompt versions on the same 20 hostile questions is worth showing at judging.
+- **Committed to the repo.** Small JSON, nothing secret, and CI then runs the suite at zero quota.
+
+This is not only a quota saving. A suite that replays offline in ~2s gets run before every commit as §7.2 requires; one that costs 8 minutes of rate-limit waiting gets skipped precisely when we are rushing — which is when we are most likely to have broken the router.
+
+**Optional, and worth it:** run the redundant ruling-check *only* in record mode, where we are spending requests deliberately. Disagreement between it and the router is a signal the router prompt needs work — redundancy where it is cheap, absent where it is expensive.
+
+#### Response caching
+
+- **Key:** `sha256(NFC-normalized + whitespace-collapsed + trimmed question + language + corpus_version + prompt_version)`. **NFC normalization is not optional** — Urdu and Arabic have multiple valid encodings of the same grapheme, so visually identical questions hash differently without it.
+- **Store:** in-process LRU `Map`. No new dependency, no infrastructure. Dies on cold start, not shared across instances — acceptable for a single demo session.
+- **Pre-seed at boot from a committed `demo-cache.json`** of rehearsed demo questions and their validated answers. The rehearsed demo then makes **zero API calls** and is immune to quota exhaustion, rate limiting, *and* a Gemini outage during judging. Novel judge questions still go live. This is our best demo insurance.
+- **Invalidation is free** — `corpus_version` and `prompt_version` are in the key, so a corpus sync or prompt edit invalidates automatically. No purge logic.
 
 ---
 
