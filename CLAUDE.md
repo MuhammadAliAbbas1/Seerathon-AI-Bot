@@ -81,7 +81,9 @@ Each of these will cost an afternoon if rediscovered by debugging.
 
 **Real counts: 120 Shamail + 34 Timeline = 154 entries.** (Not ~50 timeline — that was a guess, and timeline entries are far longer than expected: nested `content[]` arrays of prose, not the "plain text" the brief implies.) Courses: 20, index only.
 
-**153 of the 154 are usable.** Entry `67824f4d53748aebf74997ab` ("The blessed tongue of the Prophet Muhammad ﷺ") has titles in both languages and **no body text in either**. It is citable but has nothing to say — see §5.3.
+**All 154 are usable — but only because we bake `hikayat`.** Phase 0 found entry `67824f4d53748aebf74997ab` ("The blessed tongue of the Prophet Muhammad ﷺ") had titles in both languages and no body text in either. Phase 1 measured the full bake and found why: `hadeesTarjama` is on 113/120 and `points[]` on 50/120 (both exactly as Phase 0 reported), but **`hikayat` is on 120/120 in both languages** — and it gives that entry 3,384 chars of English body and 3,899 of Urdu.
+
+So `include_hikayat=true` is not merely an answer-quality lever (§5.6); it is what makes the corpus **100% usable in both languages**. Baking without it would silently reintroduce a citable-but-groundless entry. This does not retire §5.3 check 2 — `hasBody` is computed per language from whatever was actually baked, so the check still catches a future corpus version that drops content.
 
 Token cost, measured in Phase 0 (rough estimates, ±25%, and calibrated on a different tokenizer than Gemini's — treat as orders of magnitude, not budgets):
 
@@ -176,7 +178,9 @@ Then, **in code, not in the prompt**, every returned `entry_id` must pass **all 
 
 **Check 1 — the id exists** in the cached corpus. Exact match against a hex-string key. Catches an outright invented citation.
 
-**Check 2 — the entry has body text.** *Existence is not content.* Entry `67824f4d53748aebf74997ab` has titles in both languages and an empty body — it would pass check 1 while grounding nothing. And `hadeesTarjama` is present on only **113 of 120** shamail entries, `points[]` on only **50 of 120**. A model that cites a title-only entry has, in practice, answered from its own knowledge and attached a decorative reference. That is the exact failure mode this section exists to prevent.
+**Check 2 — the entry has body text.** *Existence is not content.* A model that cites a title-only entry has, in practice, answered from its own knowledge and attached a decorative reference — the exact failure mode this section exists to prevent. Coverage is genuinely patchy per field: `hadeesTarjama` is on only **113 of 120** shamail entries and `points[]` on only **50 of 120**; entry `67824f4d53748aebf74997ab` has neither. It is only rescued because we bake `hikayat` (120/120), which is a build-time choice that could change.
+
+Do **not** implement this as a hardcoded blocklist of known-empty ids. Read the `hasBody.{en,ur}` flags that `corpus:sync` computes from the bake — they stay correct when the corpus, or our bake options, change.
 
 **Check 3 — the body exists in the language being answered in.** Coverage is *not* symmetric between `en` and `ur` — e.g. `hadeesHawala` is present on 112/120 in English but 119/120 in Urdu, and one entry has Urdu-only content. Citing an entry whose text exists only in the other language produces a source card the user cannot read, and an answer that cannot be checked against its own citation.
 
