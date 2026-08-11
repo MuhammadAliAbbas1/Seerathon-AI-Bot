@@ -331,7 +331,7 @@ Architecture consequences that hold regardless of the exact numbers:
 
 #### Provider adapter
 
-Exactly two methods. Everything Gemini-specific lives behind them; no other file mentions Gemini.
+Exactly two methods. Everything provider-specific lives behind them; no other file mentions Gemini or OpenRouter.
 
 ```
 classify(question, language) → { mode, candidateIds }
@@ -339,6 +339,54 @@ answer(question, language, entries) → { answer, citations }
 ```
 
 **Do not build a generic LLM abstraction** — no streaming, no tools, no embeddings, no message-array plumbing. Two methods, two result types, one error type. The moment it grows a `generate()`, we have built a worse SDK. Its second job is to be the fixture seam (below), so record/replay survives a provider swap — which, having switched once already, is not hypothetical.
+
+**Provider is selected by config, never by code path.** A single env var — `LLM_PROVIDER=gemini|openrouter` — picks the implementation at boot. Switching providers is an env change and a redeploy, not an edit. Anything that branches on provider *inside* the pipeline is a bug; the branch belongs at construction, once.
+
+**Prompt differences are isolated.** If the fallback needs different prompt wording, it lives in that provider's own module beside its client, not in shared code and not behind conditionals. The `PROMPT_VERSION` that keys fixtures and the response cache (below) must therefore include the provider id — otherwise switching providers silently replays the wrong fixtures.
+
+#### Fallback provider: OpenRouter — INSURANCE, not a second development lane
+
+Verified working 2026-08-12 with the key in `.env` (`OPENROUTER_API_KEY`, loaded from `.env` only — never the ambient environment, same rule as §5.6's Gemini key).
+
+| | |
+|---|---|
+| **Model** | **`google/gemma-4-26b-a4b-it:free`** — one model for **both** roles |
+| **API** | OpenAI-compatible, `https://openrouter.ai/api/v1/chat/completions` |
+| **Context** | 262,144 tokens — ~24× what we send |
+| **Structured output** | `structured_outputs` **and** `response_format` both supported |
+| **Verified** | Returned valid JSON, enum-valid `mode`, correctly classified a ruling question, and produced idiomatic Urdu — in one call |
+
+**Why this model.** It was chosen against §5.6's criteria in priority order: it is one of only three `:free` models that support *both* structured-output parameters *and* are large enough to trust with classification; its 262k context is far beyond our ~11k need; and being a Google open-weight model it is the closest sibling to Gemini in the free roster, so prompts written for Gemini have the best chance of transferring without a rewrite. On the single test it classified `کیا شراب پینا جائز ہے؟` as `ruling_seeking` — the safety-critical behaviour — and wrote correct Urdu.
+
+⚠️ **The Urdu evidence is one 29-character sentence. That is a signal, not an assessment.** Before ever relying on this fallback, generate a real answer-path sample and judge it as a native speaker. Many open-weight models are weak in Urdu and the corpus is §7.1-critical.
+
+**One model, not a pair.** Unlike Gemini — where per-model rate buckets made the second call nearly free — **OpenRouter's free daily allowance is a single shared pool across all `:free` models.** Splitting roles across two models buys nothing, so we don't. Consequence: on OpenRouter our two-call pipeline yields **~25 questions/day**, not 50.
+
+**Limits** (from OpenRouter docs, not measured):
+
+- **20 requests/minute** on `:free` models, always
+- **50 requests/day** with no credits ever purchased ← our current state
+- **1,000 requests/day permanently** after a one-time **$10** purchase; credits never expire
+- The daily limit is a **shared pool**, not per-model
+- **No Google Gemini models are available free on OpenRouter** — the `google/*:free` entries are Gemma (open-weight), a different family
+
+**Caveats to design around:**
+
+- The `:free` roster **rotates, and endpoints are delisted without notice.** Re-verify the model id before depending on it; do not assume today's roster holds at judging. Treat a 404 from OpenRouter as "pick a new fallback", not "the fallback is broken".
+- **Free endpoints may train on prompts** — the same §2-shaped concern as Gemini's free tier, and another reason this is insurance rather than the default.
+
+**❌ No automatic failover.** Gemini must never fall back to OpenRouter mid-request. Silent provider switching would change model behaviour — refusal calibration, Urdu quality, JSON adherence — unpredictably and invisibly, and a demo that changes character halfway through is worse than one that returns an honest 503. Quota exhaustion surfaces as the typed 503 in §5.4. **The switch is manual: change `LLM_PROVIDER`, redeploy, verify.**
+
+**This is insurance, and using it has a real cost.** We build and validate against Gemini. The fallback is verified once and then left alone. **We do not have the request budget to run the adversarial suite against both providers** — at 50/day shared, a single 20-question run would consume most of a day. So switching providers late means **shipping a router that has never been validated on the model actually serving it**: the fixtures replay Gemini's responses, not Gemma's, so a green suite would prove nothing about the live provider. That is the price of pulling this lever, and it should be paid only when Gemini is genuinely unavailable.
+
+**Two independent escape hatches, if quota becomes the bottleneck:**
+
+| Lever | Cost | Effect |
+|-------|------|--------|
+| Gemini **Free → Tier 1** | billing enabled, ~$5 total for this project | instant, removes the quota ceiling on the *validated* provider |
+| OpenRouter **one-time $10** | $10, credits never expire | permanently raises 50/day → **1,000/day** on the fallback |
+
+Prefer the Gemini lever: it buys headroom on the provider our tests actually cover. The OpenRouter purchase is worth making only if we expect to *run* on the fallback.
 
 #### Fixture-based testing — the adversarial suite must not hit the live API
 
