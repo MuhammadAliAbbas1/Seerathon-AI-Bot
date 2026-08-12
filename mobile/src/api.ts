@@ -34,7 +34,14 @@ export async function ask(question: string, language?: Language): Promise<AskRes
   try {
     const res = await fetch(`${BASE}/api/ask`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        // localtunnel serves an HTML interstitial to anything it thinks is a
+        // browser, which would arrive here as unparseable JSON and surface as
+        // a generic error. Harmless on any other host — unknown request
+        // headers are ignored. Remove once Phase 3.5 gives us a real URL.
+        "bypass-tunnel-reminder": "true",
+      },
       // `history` is sent from day one even though the server ignores it, so
       // the wire shape never has to change after the APK ships (§5.4).
       body: JSON.stringify({ question, language, history: [] }),

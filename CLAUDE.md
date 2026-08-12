@@ -468,6 +468,19 @@ Consequences that follow from this, all mandatory:
 - **Android only.** iOS distribution needs TestFlight, a paid Apple account, and a review queue — out of reach here. Mitigate at submission with a screen recording of the app working, so iOS judges can still evaluate it.
 - **Test on a real device, not just the emulator.** They differ in ways that matter (keyboard behaviour, network, fonts, RTL rendering for Urdu).
 
+#### Device testing needs a tunnel on this network
+
+⚠️ **The LAN path is unusable here — the router has client isolation on**, so the phone cannot reach the dev server on the laptop by IP no matter what the address is. Device testing therefore goes through a **localtunnel** (`lt --port 8787`) until Phase 3.5 gives us a deployed URL.
+
+Two consequences that cost real time if forgotten:
+
+- **`EXPO_PUBLIC_*` is baked in at BUILD time, not read at runtime.** The URL that is set when `eas build` runs is the URL inside the APK, permanently.
+- **localtunnel issues a new URL on every restart.** Combined with the above, **every tunnel restart costs a full ~10-minute rebuild.** Keep the tunnel process alive rather than restarting it, and do not close that terminal.
+
+Also: the URL belongs in `eas.json`'s `env` block, **not** `mobile/.env` — EAS builds the committed git tree, and `.env*` has been gitignored since the first commit, so a local `.env` never reaches the builder and `EXPO_PUBLIC_API_URL` would arrive undefined. Both are kept in sync anyway so local Expo Go runs work too.
+
+The client sends `bypass-tunnel-reminder: true`, because localtunnel serves an HTML interstitial to anything it takes for a browser — which would reach the app as unparseable JSON and surface as a generic error rather than an obvious one.
+
 Reasoning: the persistent disclaimer and the citation chips / source cards are explicit rubric items, and a rich UI surface satisfies them natively. WhatsApp is plain text — no persistent anything, and citations degrade to bracketed text. That is a rubric problem, not a budget problem.
 
 **Stretch goal: `whatsapp`** as a *second* surface pointed at the same core, only once the core is solid and demo-able.
