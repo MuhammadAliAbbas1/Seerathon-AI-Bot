@@ -525,10 +525,36 @@ Re-run live against the deployment, on the **exact in-corpus demo chip** that fa
 
 ⚠️ **This also settles that 15s was never viable** — the healthy call needs 24.8s, so the old budget was ~40% of what the work actually takes.
 
-**Two further consequences, neither yet acted on:**
+#### 5.9 Thinking was the latency, and the answer call never needed it
 
-- **Headroom cannot be bought by redeploy alone.** Router 10s + answer 30s = 40s must stay under the APK's baked-in 45s. Trimming the router to 8s buys the answer 35s (41% headroom) without a rebuild; anything beyond that needs a new APK.
-- **28 seconds is a long time to stand in front of a judge.** This is a UX problem independent of correctness, and streaming is out of scope (§8). The existing answer is §5.6's **pre-seeded `demo-cache.json`**: rehearsed questions become instant *and* free, and are immune to quota, rate limits and provider outages. This incident raises its priority from insurance to demo-critical.
+**27.9s → 5.4s end to end. Measured, not estimated.** The fix was one line.
+
+The log named the cause: `thoughts=634` on the answer call — more tokens of reasoning than of output (277), on a task that does no reasoning. By the time the answer call runs, the router has already decided mode, precedence, candidate entries and language. The answer model receives up to five **pre-selected, pre-validated** entries and synthesises them. That is composition, not deliberation.
+
+⚠️ **The router was never thinking.** `gemini-2.5-flash-lite` defaults thinking OFF, and all 15 recorded classify fixtures show `thoughtsTokenCount: 0`. So the *judgment* half of this pipeline already made every decision that matters without thinking, in 2.5s, on a prompt 5× larger. Setting a thinking budget on the router would turn it **on** and slow down the only call that was already fast. `ANSWER_THINKING_BUDGET = 0` applies to the answer call alone; the router's config is deliberately left unset.
+
+**Measured, same question and entries, on the deployment:**
+
+| | thinking on | thinking off |
+|---|---|---|
+| Answer call | **24,831ms** | **2,163ms** |
+| Output tokens | 277 | 258 |
+| Thought tokens | 634 | 0 |
+| Citations valid (§5.3) | 5/5 | 5/5 |
+| Longest verbatim run (§5.4) | 7 words | 7 words |
+| End to end | **27.9s** | **5.4s** |
+
+**Quality did not regress on anything measurable.** Identical citation validity, identical longest verbatim run (`"if the sanctity of Allah was violated"` — a fixed theological phrase), same five entries, same through-line. Urdu: 2,911ms, 5/5 valid citations, correct honorifics and no English intrusion — *register still wants a native-speaker read, which is the user's call, not a metric.*
+
+**Entry count: keep 5, do not cap at 3.** Measured directly — 3 entries returned in 2,121ms against 2,527ms for 5, saving 400ms. But the longest verbatim run **rose from 7 words to 10** (`"however if the sanctity of allah was violated he would"`). With less material to synthesise the model leans harder on individual sentences, which pushes *toward* the §5.4 recitation risk. Paying 400ms for less reproduction and two more source cards is the right trade.
+
+**Streaming stays out of scope (§8) — but now for a measured reason.** §8 excluded it before we knew the answer took 25s, so that premise was void and it was reassessed properly:
+
+- **§5.3 makes naive streaming unsafe, and §5.3 outranks latency.** Any failed citation discards the *entire* answer. Streamed text cannot be un-said, and retracting displayed religious content is worse than never showing it.
+- A safe variant does exist: order the schema so `citations` precede `answer` (`propertyOrdering`), validate the ids as they arrive — all three §5.3 checks are id-based and need no prose — and only then stream. So "streaming is impossible here" would be **false**, and worth saying rather than hiding behind the safety argument.
+- It is nonetheless **not worth building**: at 5.4s total there is nothing to stream. It would add SSE plumbing through Vercel's legacy launcher (whose buffering behaviour is unverified), incremental client rendering, and a new mid-stream failure mode, to improve a five-second response.
+
+**The demo cache returns to being insurance, not a fix.** At 5.4s an unrehearsed judge question is answered promptly, which was the whole objection to leaning on a cache. `demo-cache.json` remains worth building for quota exhaustion and provider outages (§5.6) — not for latency.
 
 #### Cold start is a non-issue — measured, not assumed
 
@@ -634,7 +660,7 @@ Do not build these. Do not suggest them. If I ask for one, remind me it's on thi
 
 - User authentication / accounts
 - Persisted chat history across sessions
-- Streaming token-by-token responses
+- Streaming token-by-token responses — **re-examined 2026-08-12 and still excluded, now on evidence rather than assumption.** The original exclusion assumed answers were fast; they were briefly 25s, which voided that premise. Root cause was thinking, not generation (§5.9), and the answer path is now 2.2s / 5.4s end to end, so there is nothing left to stream. Note for honesty: a safe streaming design *does* exist — emit and validate `citations` before any prose, since all three §5.3 checks are id-based — so the objection is cost/benefit, not impossibility. Naive streaming remains forbidden: §5.3 discards the whole answer on any bad citation, and streamed text cannot be un-said.
 - Dark mode, theming, settings pages
 - Admin panel or content management
 - Analytics dashboards

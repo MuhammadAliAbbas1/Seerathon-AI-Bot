@@ -212,3 +212,13 @@ This document is maintained, not archived. When something here stops being true,
   **It failed preferentially on the best content.** Answer latency scales with citation count, so the better the corpus covers a question, the likelier it was to time out. A cap tuned on thin questions passes every casual test and breaks on the demo. Sampling matters as much as measuring.
 
   **A dashboard is not an oracle.** Vercel reported "No outgoing requests" for an invocation that had certainly made one — captured legacy servers are not covered by its fetch instrumentation. The reasoning that actually held was arithmetic: 3.3 + 15 + 1.5 + 15 matching a logged 34,796 ms to within 200 ms. When a tool's summary and your own numbers disagree, find out which one is measuring.
+
+- **2026-08-12 (amended, latency)** — **27.9s → 5.4s, by deleting work rather than tuning budgets.** Raising the timeout made the failure stop; it did not make the system good. The log line added in the previous entry named the actual cause on its first use: `thoughts=634` on the answer call, more reasoning tokens than output tokens, on a task where the router had already decided everything. Disabling thinking on the answer call alone took it from 24,831ms to 2,163ms with identical citation validity and identical verbatim-overlap.
+
+  Two things this says about how we were working:
+
+  **We had been treating a symptom as the problem.** A 30s budget for a 25s call is a system that barely works; the question "why does this take 25 seconds at all?" was available the whole time and only got asked when someone refused to accept 28s. Instrumentation is what made it answerable in one step instead of a day — the fix followed directly from a field in a log line that had existed for under an hour.
+
+  **The scoping decision in §8 had gone stale without anyone noticing.** Streaming was excluded when answers were assumed fast, and that exclusion silently survived a period when answers took 25 seconds — precisely the condition that would have justified revisiting it. Scope decisions carry premises, and premises expire. §8 now records *why* streaming is excluded and what would change it, rather than only that it is.
+
+  Worth stating plainly: measuring 3 vs 5 citation entries showed fewer entries made verbatim reproduction **worse** (7 → 10 word runs), because a model with less material to synthesise leans harder on individual sentences. That was not the expected direction, and it is the reason the obvious "send less, go faster" optimisation was rejected.

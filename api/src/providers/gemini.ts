@@ -1,5 +1,5 @@
 import { requireEnv } from "../config.ts";
-import { ANSWER_TIMEOUT_MS, RETRY_DELAY_MS, ROUTER_TIMEOUT_MS } from "../timeouts.ts";
+import { ANSWER_THINKING_BUDGET, ANSWER_TIMEOUT_MS, RETRY_DELAY_MS, ROUTER_TIMEOUT_MS } from "../timeouts.ts";
 import { ANSWER_SCHEMA, ROUTER_SCHEMA, buildAnswerPrompt, buildRouterPrompt } from "../prompts.ts";
 import type {
   AnswerRequest,
@@ -39,6 +39,11 @@ interface CallOpts {
   schema: unknown;
   maxOutputTokens: number;
   timeoutMs: number;
+  /**
+   * Gemini thinking budget, in tokens. 0 disables thinking; range 0–24576.
+   * Omitted means "leave the model's default alone".
+   */
+  thinkingBudget?: number;
 }
 
 /**
@@ -58,6 +63,9 @@ async function call(opts: CallOpts, attempt = 1): Promise<ProviderOutcome> {
       // which is the MAX_TOKENS case the offline suite covers.
       maxOutputTokens: opts.maxOutputTokens,
       temperature: 0,
+      ...(opts.thinkingBudget === undefined
+        ? {}
+        : { thinkingConfig: { thinkingBudget: opts.thinkingBudget } }),
     },
   };
 
@@ -210,6 +218,12 @@ export function createGeminiProvider(): LlmProvider {
         schema: ROUTER_SCHEMA,
         maxOutputTokens: 2048,
         timeoutMs: ROUTER_TIMEOUT_MS,
+        // Deliberately UNSET. gemini-2.5-flash-lite has thinking OFF by
+        // default, and all 15 recorded classify fixtures confirm it —
+        // thoughtsTokenCount is 0 on every one. The router therefore already
+        // makes its judgment (mode, precedence, candidates, language) without
+        // thinking, in 1.3–2.6s. Setting a budget here would TURN THINKING ON
+        // and slow down the one call that is currently fast.
       });
     },
 
@@ -219,9 +233,9 @@ export function createGeminiProvider(): LlmProvider {
         model: GEMINI_ANSWER_MODEL,
         prompt: buildAnswerPrompt(req.question, req.language, req.entries),
         schema: ANSWER_SCHEMA,
-        // Three times the router's budget: this model thinks, and its latency
-        // scales with how many entries the router found (timeouts.ts).
         timeoutMs: ANSWER_TIMEOUT_MS,
+        // ── Thinking OFF. See ANSWER_THINKING_BUDGET for the measurements. ──
+        thinkingBudget: ANSWER_THINKING_BUDGET,
         // Sized generously ON PURPOSE. gemini-2.5-flash is a thinking model and
         // thinking is charged against the output budget — we have already
         // observed a 16-token cap produce finishReason=MAX_TOKENS on a
