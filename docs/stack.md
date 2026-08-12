@@ -182,7 +182,7 @@ The decision was reasoned rather than defaulted, but it was reasoned against *th
 
 We are running **Node 24 with two devDependencies and zero runtime dependencies** — TypeScript and its Node types, both for checking only, neither shipped. The backend is a pure function that takes a question and returns structured JSON; the HTTP layer around it is about a hundred lines and is deliberately swappable. We chose TypeScript over Python because our backend does **no machine learning at all** — it is an HTTP client and a hash-map lookup — and because the client is React Native, so one language covers both halves.
 
-The honest weakness that remains: **nothing has been deployed yet**, so the production HTTP layer is still hypothetical and everything verified end to end was verified against a dev server that will not exist in production. That is Phase 3.5, and it is carrying risk it need not have carried, because the framework decision was deferred four times without being surfaced.
+~~The honest weakness that remains: **nothing has been deployed yet**~~ — **closed 2026-08-12.** The backend is live at `https://seerathon-api.vercel.app` on a captured `node:http` server, still with zero runtime dependencies. See the changelog below for what the deploy actually cost, because the estimate in this document was wrong in an instructive way.
 
 ---
 
@@ -192,3 +192,13 @@ This document is maintained, not archived. When something here stops being true,
 
 - **2026-08-12 (written)** — Phase 4. Recorded the framework gap, the unchecked backend types, the duplicated contract, and the untested deployment path.
 - **2026-08-12 (amended)** — §5.1 and §5.2 closed the same day: TypeScript added and the backend type-checked for the first time (7 errors, none in `api/src/`); `contract.ts` made the single source of truth with a sync-and-check script, drift detection verified by deliberately breaking it. §1's deployment gap is unchanged and remains the largest open risk.
+
+- **2026-08-12 (amended)** — **§1's deployment gap closed.** Live at `https://seerathon-api.vercel.app`. Two things this document got wrong, both worth keeping:
+
+  **The "no framework" verdict held, and was cheaper than argued.** The production entrypoint is ~110 lines of `node:http` wrapping the same `handleAsk()` the dev server uses. Vercel captures a root `server.ts` directly, so there was no adapter to write. Runtime dependencies remain **zero**. If anything this document *undersold* the position by treating it as a close call.
+
+  **But "the production HTTP layer is still hypothetical" was the understatement.** The risk was not the HTTP layer — that was trivial. It was **four independent blockers, none of which were visible locally and every one of which would have shipped a broken deployment**: config read only `.env` (absent on any server, so every request would throw); `corpus.json` was loaded by a runtime-computed path the bundler cannot trace (not uploaded → `ENOENT` on the first question); `typescript@7` removed `ts.sys`, which Vercel's build-time typecheck calls, crashing the build; and the timeout ladder was inverted, so a hung provider would have reached the app as a generic network error instead of the typed 503 the server was about to send. **Deferring the deploy did not defer the risk — it concentrated it**, and the cost of finding these at judging rather than now is not comparable to the cost of finding them now.
+
+  The general lesson, which is the one worth carrying: **"it works locally" and "it works deployed" are different claims about different systems**, and the gap between them is made of exactly the assumptions that never get stated — where config comes from, which files exist, what the toolchain runs. A stack review that says "not deployed yet" is describing an unknown, not a small remaining task.
+
+  Still open: `in_corpus` has not been verified *through* the deployment — the Gemini daily quota ran out mid-verification. The 429 → typed 503 path was verified live as a consequence.

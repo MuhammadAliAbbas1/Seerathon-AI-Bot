@@ -306,8 +306,17 @@ Rate limits are **per project, not per API key** (confirmed in docs) and appear 
 |----------|--------|
 | RPM per model | **unknown** — 5 concurrent requests to `gemini-2.5-flash-lite` did **not** trip a 429, so it is >5 concurrent |
 | TPM per model | **unknown** |
-| RPD, and whether it is per-model or project-wide | **unknown** |
-| 429 response body / retry timing | **unverified** — could not trip one; docs document neither `Retry-After` nor `retryDelay` |
+| RPD, and whether it is per-model or project-wide | **probably reached on 2026-08-12** — see below |
+| 429 response body / retry timing | **unverified** — docs document neither `Retry-After` nor `retryDelay` |
+
+⚠️ **2026-08-12, during Phase 3.5 verification: the quota ran out and did not recover.** An `out_of_corpus` question succeeded against the deployment (router only, 2.58s). Fifteen seconds later the next question returned 429 **in 0.65s** — far too fast to be a successful router call, so it was the router model (`gemini-2.5-flash-lite`) refusing immediately. A retry a minute later returned the same thing. **A limit that does not clear within a minute is a daily limit, not RPM.**
+
+Two consequences:
+
+- **`in_corpus` has never been verified through the deployment.** It is verified offline and was verified live pre-deploy in Phase 3, but the deployed answer path — Vercel's egress, the production key, §5.3 validation on real responses — has not run end to end. This is the single largest untested gap and it must be closed before judging.
+- **This is the situation §5.6 says to pull the lever for.** Gemini **Free → Tier 1** needs only billing enabled, takes effect instantly, and costs roughly **$5 for this entire project**. It removes the ceiling on the provider our fixtures and tests actually cover. Prefer it over the OpenRouter purchase, which raises the limit on a provider the suite has never validated.
+
+The failure was at least honest: the deployment translated Gemini's 429 into the typed **503 `quota_exhausted`** with the calm capacity copy, in 0.65s. That path had only ever been exercised offline; it is now verified live.
 
 **To measure:** read the **`Gemini 2.5 Flash`** and **`Gemini 2.5 Flash-Lite`** rows in AI Studio for project `268175794480` and record RPM / TPM / RPD for each. Known spend against this project so far: **1 request to `gemini-2.5-flash`, 6 to `gemini-2.5-flash-lite`**, plus one `GET /models` — if the two models' daily counters differ by that split, RPD is per-model; if a single aggregate moved by 7, it is project-wide.
 
@@ -451,6 +460,41 @@ This is not only a quota saving. A suite that replays offline in ~2s gets run be
 
 ---
 
+### 5.7 The deployment — settled 2026-08-12
+
+**Live: `https://seerathon-api.vercel.app`** (Vercel project `seerathon-api`, region **`bom1`** / Mumbai). Everything below was verified against the real deployment, not inferred.
+
+**No framework, and no new runtime dependency.** §5.1 already put the work in a pure `handleAsk(body, provider) → {status, body}`, so the entrypoint only had to parse a URL, read a body, check a rate limit and write JSON. Hono or Express would each buy about fifteen lines of `node:http` in exchange for a dependency, a version to track and one more thing that can differ between local and deployed. **Runtime dependencies stay at zero.** Revisit only if real routing, middleware or auth ever appears — none of which is on the roadmap (§8).
+
+`server.ts` at the repo root is a **captured Node server**: Vercel detects the `listen()` call at module startup and routes to it. That is *not* the same as an `/api` function, and the difference bites in two places — the `functions` property in `vercel.json` is only matched against files **inside `api/`**, so it cannot configure this entrypoint (Vercel fails the build outright if you try), and `maxDuration` therefore stays at the platform default. Fine: Hobby's default is ≥60s, comfortably above the client's 45s abort, so the §5.6 ladder holds.
+
+#### Four things that would each have broken the deploy, and none of which were visible locally
+
+1. **`config.ts` read only `.env`, which by design never exists on a server.** Every request would have thrown on a missing key. The source is now chosen **once, all-or-nothing** — never merged per-key, because per-key fallback is exactly what silently reaches for the stale ambient key (§5.6). On Vercel a `.env` file is **refused outright** rather than merely deprioritised (`VERCEL=1` is checked), so a stray upload cannot flip production onto the dev project's key. `.vercelignore` excludes `.env*` as defence in depth. **`/api/health` reports `configSource`** so the active source is checkable rather than assumed.
+2. **`corpus.json` was read via `readFileSync` from a path computed at runtime**, which Vercel's file tracer cannot see — it would not have been uploaded, and the first question would have crashed on `ENOENT`. It is now a **static JSON import** the bundler can follow. Confirmed in the build output as `corpus.mjs`, and `/api/health` reports 154 entries from the live deployment.
+3. **TypeScript 7 removed `ts.sys`**, which Vercel's build-time typecheck calls — the build crashed inside `@vercel/backends` with an unhelpful `Cannot read properties of undefined (reading 'readFile')`. **Pinned to `typescript@5.9.3`.** Do not upgrade to 7.x without re-testing the deploy.
+4. **The timeout ladder was inverted.** The Gemini client allowed 60s while the app aborted at 45s, so a hung provider would have reached the user as a *generic network error* instead of the typed 503 the server was about to send — the failure path lying about why it failed, one layer out (§5.6). Now 15s per provider call; worst case ≈33.5s server-side < 45s client < platform limit. Derived, not guessed, in `api/src/timeouts.ts`.
+
+#### Cold start is a non-issue — measured, not assumed
+
+Vercel Functions scale to zero, so "does not sleep" deserved a number rather than a reassurance. **First hit on a fresh deployment: 520ms end-to-end, including parsing the 1.18 MB corpus.** Warm: 240–570ms. There is no waking-container penalty of the kind a sleeping free-tier host imposes, and the answer path costs seconds anyway.
+
+Region is pinned to **`bom1`** because the default `iad1` (US East) crosses two oceans from Pakistan, where judging happens.
+
+#### Rate limiting (§5.4 abuse mitigation)
+
+**10/min and 100/day per IP, plus a 500/day global backstop.** The global counter is the part that still holds when traffic is spread across addresses; the per-IP limit cannot.
+
+Stated honestly: this is an **in-process Map — per-instance, reset on cold start, not shared between concurrent instances.** It stops one person or one script hammering the endpoint and does **not** stop a distributed attacker. That is an accepted trade, not an oversight — fixing it properly means Redis/KV, a dependency and a service (§9) bought for a threat model this project does not have. **The real ceiling is the free-tier quota**, so an attacker's reward for getting past it is typed 503s, not a bill.
+
+The check runs **after** body parsing, deliberately: no provider call can precede it either way, so nothing is given up, and it buys the question's language so the refusal is localized (§7.1). An English "too many requests" on an Urdu question is exactly the seam §7.1 exists to prevent — verified in Urdu on the deployment.
+
+**`rate_limited` is a distinct error code from `quota_exhausted`.** Different cause — ours versus the provider's — identical calm rendering (§12.2). Conflating them would make the logs lie about which limit was hit.
+
+⚠️ **A spend cap is still not set.** On the free tier the quota is the cap (§5.4), so this is currently sound; it becomes load-bearing the moment billing is enabled.
+
+---
+
 ## 6. Platform decision
 
 The brief offers three platforms; participants choose **one**.
@@ -468,18 +512,16 @@ Consequences that follow from this, all mandatory:
 - **Android only.** iOS distribution needs TestFlight, a paid Apple account, and a review queue — out of reach here. Mitigate at submission with a screen recording of the app working, so iOS judges can still evaluate it.
 - **Test on a real device, not just the emulator.** They differ in ways that matter (keyboard behaviour, network, fonts, RTL rendering for Urdu).
 
-#### Device testing needs a tunnel on this network
+#### Device testing — RESOLVED by Phase 3.5. The tunnel era is over.
 
-⚠️ **The LAN path is unusable here — the router has client isolation on**, so the phone cannot reach the dev server on the laptop by IP no matter what the address is. Device testing therefore goes through a **localtunnel** (`lt --port 8787`) until Phase 3.5 gives us a deployed URL.
+The APK now points at the deployed backend (§5.7), which is **stable across redeploys: shipping a new backend no longer requires a new APK.**
 
-Two consequences that cost real time if forgotten:
+Kept because both facts still bind, and one of them will bite again:
 
-- **`EXPO_PUBLIC_*` is baked in at BUILD time, not read at runtime.** The URL that is set when `eas build` runs is the URL inside the APK, permanently.
-- **localtunnel issues a new URL on every restart.** Combined with the above, **every tunnel restart costs a full ~10-minute rebuild.** Keep the tunnel process alive rather than restarting it, and do not close that terminal.
+- **`EXPO_PUBLIC_*` is baked in at BUILD time, not read at runtime.** The URL set when `eas build` runs is the URL inside the APK, permanently. Changing the backend URL — not the backend *code* — still costs a rebuild.
+- **The URL belongs in `eas.json`'s `env` block, not `mobile/.env`.** EAS builds the committed git tree and `.env*` has been gitignored since the first commit, so a local `.env` never reaches the builder and `EXPO_PUBLIC_API_URL` would arrive undefined. Both are kept in sync anyway so local Expo Go runs work.
 
-Also: the URL belongs in `eas.json`'s `env` block, **not** `mobile/.env` — EAS builds the committed git tree, and `.env*` has been gitignored since the first commit, so a local `.env` never reaches the builder and `EXPO_PUBLIC_API_URL` would arrive undefined. Both are kept in sync anyway so local Expo Go runs work too.
-
-The client sends `bypass-tunnel-reminder: true`, because localtunnel serves an HTML interstitial to anything it takes for a browser — which would reach the app as unparseable JSON and surface as a generic error rather than an obvious one.
+History, so the reasoning is not rediscovered: **the LAN path is unusable on this network — the router has client isolation on**, so the phone cannot reach the laptop by IP at all. Device testing went through a localtunnel, and because tunnel URLs change on every restart while `EXPO_PUBLIC_*` bakes at build time, **every tunnel restart cost a full ~10-minute rebuild.** That is precisely the tax Phase 3.5 removed, and it is why the deploy was brought forward rather than deferred again. The `bypass-tunnel-reminder` header the client used to send (localtunnel serves an HTML interstitial to anything it takes for a browser, which arrives as unparseable JSON) has been removed.
 
 Reasoning: the persistent disclaimer and the citation chips / source cards are explicit rubric items, and a rich UI surface satisfies them natively. WhatsApp is plain text — no persistent anything, and citations degrade to bracketed text. That is a rubric problem, not a budget problem.
 
@@ -554,7 +596,7 @@ Do not build these. Do not suggest them. If I ask for one, remind me it's on thi
 - [ ] **Phase 1 — Corpus bake + routing index.** ← we are here. Three deliverables: (a) `corpus:sync` writes the full 781 KB `corpus.json` — both languages, hikayat included; (b) build the ~9.7k-token bilingual routing index off it; (c) **throwaway EAS hello-world APK build to de-risk the pipeline.** **Also: throwaway EAS hello-world APK build to de-risk the pipeline.**
 - [ ] Phase 2 — Guardrail router (3-way classification)
 - [ ] Phase 3 — Answer path + citation validation
-- [ ] Phase 3.5 — Deploy backend, app talks to live endpoint
+- [x] **Phase 3.5 — Deploy backend. COMPLETE 2026-08-12.** Live at **`https://seerathon-api.vercel.app`**. Details in §5.7. Verified at zero quota: health, `ruling_seeking` (en + ur), 400/404, and the rate limiter. `out_of_corpus` verified live. **`in_corpus` is NOT yet verified through the deployment** — the Gemini daily quota ran out mid-verification, which itself verified the 429 → typed 503 path live (§5.6).
 - [ ] Phase 4 — Chat UI (source cards, persistent disclaimer)
 - [ ] Phase 5 — Urdu support
 - [ ] Phase 6 — Adversarial hardening
