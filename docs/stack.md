@@ -201,4 +201,4 @@ This document is maintained, not archived. When something here stops being true,
 
   The general lesson, which is the one worth carrying: **"it works locally" and "it works deployed" are different claims about different systems**, and the gap between them is made of exactly the assumptions that never get stated — where config comes from, which files exist, what the toolchain runs. A stack review that says "not deployed yet" is describing an unknown, not a small remaining task.
 
-  Still open: `in_corpus` has not been verified *through* the deployment — the Gemini daily quota ran out mid-verification. The 429 → typed 503 path was verified live as a consequence.
+  All four rubric behaviours are now verified *through* the deployment, along with the quota path — a real Gemini 429 became a typed 503 with calm copy in 0.65s, a behaviour previously only exercised offline.

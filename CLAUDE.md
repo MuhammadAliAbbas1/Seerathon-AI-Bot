@@ -306,17 +306,17 @@ Rate limits are **per project, not per API key** (confirmed in docs) and appear 
 |----------|--------|
 | RPM per model | **unknown** — 5 concurrent requests to `gemini-2.5-flash-lite` did **not** trip a 429, so it is >5 concurrent |
 | TPM per model | **unknown** |
-| RPD, and whether it is per-model or project-wide | **probably reached on 2026-08-12** — see below |
+| RPD, and whether it is per-model or project-wide | **still unknown** — the 2026-08-12 exhaustion was NOT daily; see below |
 | 429 response body / retry timing | **unverified** — docs document neither `Retry-After` nor `retryDelay` |
 
-⚠️ **2026-08-12, during Phase 3.5 verification: the quota ran out and did not recover.** An `out_of_corpus` question succeeded against the deployment (router only, 2.58s). Fifteen seconds later the next question returned 429 **in 0.65s** — far too fast to be a successful router call, so it was the router model (`gemini-2.5-flash-lite`) refusing immediately. A retry a minute later returned the same thing. **A limit that does not clear within a minute is a daily limit, not RPM.**
+⚠️ **2026-08-12, Phase 3.5: a real quota exhaustion, and a recovery that corrects the first reading.** An `out_of_corpus` question succeeded against the deployment (router only, 2.58s). Fifteen seconds later the next question returned 429 **in 0.65s** — far too fast to be a successful router call, so the router model refused immediately. A retry ~60s later returned the same. **On that evidence it looked like a daily cap. It was not: the same question succeeded ~12 minutes later.**
 
-Two consequences:
+So the recovery window is **somewhere between 1 and 12 minutes** — longer than a rolling minute, well short of a day. Two things follow:
 
-- **`in_corpus` has never been verified through the deployment.** It is verified offline and was verified live pre-deploy in Phase 3, but the deployed answer path — Vercel's egress, the production key, §5.3 validation on real responses — has not run end to end. This is the single largest untested gap and it must be closed before judging.
-- **This is the situation §5.6 says to pull the lever for.** Gemini **Free → Tier 1** needs only billing enabled, takes effect instantly, and costs roughly **$5 for this entire project**. It removes the ceiling on the provider our fixtures and tests actually cover. Prefer it over the OpenRouter purchase, which raises the limit on a provider the suite has never validated.
+- **Do not conclude "daily" from a limit that survives one retry.** A minute is not enough evidence, and the wrong conclusion here would have justified enabling billing that was not needed. Wait ten minutes before spending money on a quota diagnosis.
+- **The escape hatch was not pulled and is not currently needed.** Gemini Free → Tier 1 (~$5, instant) remains the preferred lever *if* quota genuinely becomes the bottleneck — it buys headroom on the provider our fixtures actually cover. Reach for it during rehearsal if refusals start arriving as 503s.
 
-The failure was at least honest: the deployment translated Gemini's 429 into the typed **503 `quota_exhausted`** with the calm capacity copy, in 0.65s. That path had only ever been exercised offline; it is now verified live.
+The failure was honest throughout: the deployment translated Gemini's 429 into the typed **503 `quota_exhausted`** with the calm capacity copy, in 0.65s. That path had only ever been exercised offline; **it is now verified live**, which is a rubric-relevant behaviour we would otherwise have first seen on stage.
 
 **To measure:** read the **`Gemini 2.5 Flash`** and **`Gemini 2.5 Flash-Lite`** rows in AI Studio for project `268175794480` and record RPM / TPM / RPD for each. Known spend against this project so far: **1 request to `gemini-2.5-flash`, 6 to `gemini-2.5-flash-lite`**, plus one `GET /models` — if the two models' daily counters differ by that split, RPD is per-model; if a single aggregate moved by 7, it is project-wide.
 
@@ -596,7 +596,7 @@ Do not build these. Do not suggest them. If I ask for one, remind me it's on thi
 - [ ] **Phase 1 — Corpus bake + routing index.** ← we are here. Three deliverables: (a) `corpus:sync` writes the full 781 KB `corpus.json` — both languages, hikayat included; (b) build the ~9.7k-token bilingual routing index off it; (c) **throwaway EAS hello-world APK build to de-risk the pipeline.** **Also: throwaway EAS hello-world APK build to de-risk the pipeline.**
 - [ ] Phase 2 — Guardrail router (3-way classification)
 - [ ] Phase 3 — Answer path + citation validation
-- [x] **Phase 3.5 — Deploy backend. COMPLETE 2026-08-12.** Live at **`https://seerathon-api.vercel.app`**. Details in §5.7. Verified at zero quota: health, `ruling_seeking` (en + ur), 400/404, and the rate limiter. `out_of_corpus` verified live. **`in_corpus` is NOT yet verified through the deployment** — the Gemini daily quota ran out mid-verification, which itself verified the 429 → typed 503 path live (§5.6).
+- [x] **Phase 3.5 — Deploy backend. COMPLETE 2026-08-12.** Live at **`https://seerathon-api.vercel.app`**. Details in §5.7. **All four rubric behaviours verified through the real deployment**, plus the quota path: `ruling_seeking` (en + ur, zero quota — the ratchet short-circuits), `out_of_corpus`, `in_corpus` (5 valid citations), error paths (400/404), the rate limiter (localized 429), and a genuine `quota_exhausted` 503. APK rebuilt against this URL.
 - [ ] Phase 4 — Chat UI (source cards, persistent disclaimer)
 - [ ] Phase 5 — Urdu support
 - [ ] Phase 6 — Adversarial hardening
