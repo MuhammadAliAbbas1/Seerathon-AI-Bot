@@ -10,8 +10,8 @@
         "buildType": "apk"
       },
       "env": {
-        "//": "EAS builds the COMMITTED git tree, and mobile/.env is gitignored, so build-time env belongs here. This is a localtunnel URL: the LAN path is unusable on this network because the router has client isolation on. Tunnel URLs change on every restart and EXPO_PUBLIC_* is baked in at build time, so a tunnel restart costs a full rebuild - keep the tunnel alive. Phase 3.5 replaces this with the deployed URL.",
-        "EXPO_PUBLIC_API_URL": "https://upset-points-stop.loca.lt"
+        "//": "EAS builds the COMMITTED git tree, and mobile/.env is gitignored, so build-time env belongs here. This is now the deployed backend (Phase 3.5), which ends the tunnel era: EXPO_PUBLIC_* is baked in at build time, so every localtunnel restart used to cost a full ~10-minute rebuild. This URL is stable across redeploys - shipping a new backend does NOT require a new APK.",
+        "EXPO_PUBLIC_API_URL": "https://seerathon-api.vercel.app"
       }
     },
     "production": {

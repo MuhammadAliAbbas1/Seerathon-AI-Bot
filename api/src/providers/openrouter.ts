@@ -1,4 +1,5 @@
 import { requireEnv } from "../config.ts";
+import { PROVIDER_TIMEOUT_MS, RETRY_DELAY_MS } from "../timeouts.ts";
 import { ANSWER_SCHEMA, ROUTER_SCHEMA, buildAnswerPrompt, buildRouterPrompt } from "../prompts.ts";
 import type {
   AnswerRequest,
@@ -46,7 +47,9 @@ async function call(prompt: string, maxTokens: number, attempt = 1, schema: unkn
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(120_000),
+      // Same ladder as Gemini (timeouts.ts). Was 120s, which was longer than
+      // the platform would even allow the function to run.
+      signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     });
     status = res.status;
     raw = await res.json();
@@ -54,7 +57,7 @@ async function call(prompt: string, maxTokens: number, attempt = 1, schema: unkn
     const name = (err as Error)?.name;
     const failure: ProviderFailure = name === "TimeoutError" || name === "AbortError" ? "timeout" : "transport";
     if (attempt === 1) {
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
       return call(prompt, maxTokens, 2, schema);
     }
     return { ok: false, failure, detail: `${name}: ${(err as Error)?.message ?? ""}` };

@@ -91,7 +91,11 @@ export default function App() {
           // Quota and outage copy comes from the server too, so it is
           // localized and worded once.
           text: res.message || t("offline", res.language),
-          mode: res.code === "quota_exhausted" ? "quota" : "error",
+          // Both capacity cases render as "quota", which §12.2 requires to be
+          // as calm as a refusal — no red, no error iconography. A red alert
+          // mid-demo reads as a crash even when the system is behaving exactly
+          // as designed.
+          mode: res.code === "quota_exhausted" || res.code === "rate_limited" ? "quota" : "error",
         },
       ];
     });

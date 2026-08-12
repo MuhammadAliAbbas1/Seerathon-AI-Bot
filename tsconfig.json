@@ -1,5 +1,7 @@
 {
   "//": "Type-CHECKING only. Node 24 runs these files by stripping types, which never checks them — so without this, every annotation in api/src is a comment that looks like a guarantee.",
+  "//resolveJsonModule": "Required because corpus.json is imported as a MODULE rather than read from disk — see the comment at the top of api/src/corpus.ts for why. (Comment keys are only legal at this level; inside compilerOptions tsc rejects them as unknown options.)",
+  "//include": "server.ts is the production entrypoint at the repo root, so it is listed explicitly.",
   "compilerOptions": {
     "target": "ES2023",
     "lib": ["ES2023"],
@@ -13,10 +15,11 @@
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
         "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "noEmit": true,
     "skipLibCheck": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["api/**/*.ts", "scripts/**/*.mjs"],
+  "include": ["server.ts", "api/**/*.ts", "scripts/**/*.mjs"],
   "exclude": ["node_modules", "mobile"]
 }

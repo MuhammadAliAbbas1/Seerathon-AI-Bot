@@ -83,3 +83,6 @@ $RECYCLE.BIN/
 # Local Claude Code settings (shared settings.json stays tracked)
 # ---------------------------------------------------------------------------
 .claude/settings.local.json
+
+.vercel
+.env*

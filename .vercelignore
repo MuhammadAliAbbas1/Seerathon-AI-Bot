@@ -1,0 +1,31 @@
+# ── SECRETS ───────────────────────────────────────────────────────────────
+# The single most important lines in this file.
+#
+# api/src/config.ts selects its config source by whether .env EXISTS: if the
+# file is present it is authoritative and process.env is ignored entirely.
+# So uploading .env would not merely leak the dev keys into the deployment —
+# it would make the deployment PREFER them, silently running production on the
+# dev project's Gemini key and ignoring the Vercel environment variables we
+# set. Both halves of §5.4's key separation would fail at once, quietly.
+.env
+.env.*
+
+# ── Not needed at runtime, and would otherwise be scanned as functions ────
+# Vercel turns files under /api into serverless functions. These are dev-only,
+# so excluding them keeps the deployment to the one captured server entrypoint.
+api/tests/
+api/scripts/
+api/fixtures/
+tests/
+
+# ── Weight and noise ──────────────────────────────────────────────────────
+mobile/
+recon/
+docs/
+node_modules/
+.git/
+.expo/
+*.apk
+
+# Editor/agent local settings — no reason to ship these.
+.claude/

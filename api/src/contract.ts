@@ -67,7 +67,12 @@ export type ErrorCode =
   | "quota_exhausted"
   | "provider_unavailable"
   | "blocked"
-  | "invalid_request";
+  | "invalid_request"
+  /** HTTP 429 from OUR limiter, not the provider's. Kept distinct from
+   *  quota_exhausted so logs can tell "we throttled them" from "Gemini
+   *  throttled us" — the failure path may not lie about why it failed
+   *  (§5.6). Both render with the same calm capacity copy (§12.2). */
+  | "rate_limited";
 
 export interface AskErrorBody {
   error: {

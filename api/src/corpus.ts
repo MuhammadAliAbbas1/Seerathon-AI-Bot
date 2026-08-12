@@ -1,6 +1,17 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { REPO_ROOT } from "./config.ts";
+// ── Why this is an IMPORT and not a readFileSync ──────────────────────────
+// The corpus is baked at build time (§5.4), so on a server it has to arrive
+// inside the deployment bundle. Vercel traces a function's files statically,
+// and `readFileSync(join(REPO_ROOT, …))` is invisible to that tracer — the
+// path is computed at runtime from import.meta.url, so corpus.json would
+// simply not be uploaded, and the first question in production would crash on
+// ENOENT. A static import is a dependency the bundler can see, so inclusion is
+// guaranteed rather than hoped for, and the path is resolved at build time
+// instead of being reconstructed from a directory layout that deployment
+// changes underneath us.
+//
+// Requires "resolveJsonModule" in tsconfig.json. Verified under Node 24's
+// native type-stripping and under tsc.
+import corpusJson from "../../corpus.json" with { type: "json" };
 import type { Language } from "./types.ts";
 
 export interface CorpusEntry {
@@ -24,10 +35,14 @@ export interface Corpus {
 
 let cached: Corpus | null = null;
 
-/** Loaded once and held. Baked at build time, so this is a file read, not a fetch (§5.4). */
+/**
+ * Baked at build time, so this is a module lookup — not a fetch, and no longer
+ * even a disk read (§5.4). Still routed through a function with a `cached`
+ * slot so __setCorpusForTests can swap in a fake.
+ */
 export function loadCorpus(): Corpus {
   if (!cached) {
-    cached = JSON.parse(readFileSync(join(REPO_ROOT, "corpus.json"), "utf8")) as Corpus;
+    cached = corpusJson as unknown as Corpus;
   }
   return cached;
 }

@@ -1,4 +1,5 @@
 import { requireEnv } from "../config.ts";
+import { PROVIDER_TIMEOUT_MS, RETRY_DELAY_MS } from "../timeouts.ts";
 import { ANSWER_SCHEMA, ROUTER_SCHEMA, buildAnswerPrompt, buildRouterPrompt } from "../prompts.ts";
 import type {
   AnswerRequest,
@@ -67,7 +68,9 @@ async function call(opts: CallOpts, attempt = 1): Promise<ProviderOutcome> {
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(60_000),
+      // See timeouts.ts — this must stay BELOW the client abort, or the app
+      // gives up before our typed 503 can reach it.
+      signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     });
     status = res.status;
     raw = await res.json();
@@ -78,7 +81,7 @@ async function call(opts: CallOpts, attempt = 1): Promise<ProviderOutcome> {
     // (§5.6), and retries consume RPD too — burning the daily budget guessing
     // at backoff is a bad trade.
     if (attempt === 1) {
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
       return call(opts, 2);
     }
     return { ok: false, failure, detail: `${name}: ${(err as Error)?.message ?? ""}` };
