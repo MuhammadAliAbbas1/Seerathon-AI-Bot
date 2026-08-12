@@ -57,12 +57,26 @@
  * case where the client aborting first costs nothing extra.)
  */
 
-/** Router (`gemini-2.5-flash-lite`). Measured 1.3–2.3s; this is ~5×. */
+/** Router (`gemini-2.5-flash-lite`). Measured 1.3–2.6s; this is ~4×. */
 export const ROUTER_TIMEOUT_MS = 10_000;
 
 /**
- * Answer (`gemini-2.5-flash`, a thinking model). Twice the 15s that was
- * measured failing, and ~1.5× the top of the observed healthy band.
+ * Answer (`gemini-2.5-flash`, a thinking model).
+ *
+ * ⚠️ MEASURED ON THE DEPLOYMENT, 2026-08-12, on the in-corpus demo chip —
+ * the question this budget exists to survive:
+ *
+ *     answer  elapsed=24831ms  budget=30000ms  tokens(prompt=2758 out=277 thoughts=634)
+ *
+ * **24.8s against a 30s budget is 83% consumed — 5.2s of headroom.** It
+ * passes, and it is tighter than it should be. Two reasons to think the true
+ * worst case is higher: recorded fixtures show answer prompts up to 4,051
+ * tokens (this one was 2,758) and up to 836 thought tokens (this one 634).
+ * A heavier question plausibly lands near 30s.
+ *
+ * The binding constraint on raising it is CLIENT_TIMEOUT_MS below, which is
+ * baked into a shipped APK. Raising the answer budget past ~35s therefore
+ * requires a rebuild, not just a redeploy.
  */
 export const ANSWER_TIMEOUT_MS = 30_000;
 

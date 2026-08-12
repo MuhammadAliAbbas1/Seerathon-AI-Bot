@@ -502,6 +502,34 @@ That 34,796 ms is our own timer, which brackets `handleAsk` alone — so it excl
 
 **A misreading worth recording.** Vercel's dashboard reported **"No outgoing requests"** for that invocation, which looked like decisive evidence the call never reached Gemini. It was not evidence at all: a captured ("legacy") root `server.ts` is not covered by Vercel's automatic `fetch` instrumentation, so the panel is silent about our egress in general. The router call had certainly succeeded — it is the only way to reach the answer call. `/api/health?deep=1` now proves egress independently, at zero Gemini cost.
 
+#### Verified fixed — and the real numbers
+
+Re-run live against the deployment, on the **exact in-corpus demo chip** that failed:
+
+```
+[gemini] classify  elapsed=2561ms   budget=10000ms  -> ok  tokens(prompt=13991 out=155 thoughts=0)
+[gemini] answer    elapsed=24831ms  budget=30000ms  -> ok  tokens(prompt=2758 out=277 thoughts=634)
+200  27400ms
+```
+
+`in_corpus`, 5 valid citations, 27.9s end to end from Pakistan.
+
+| Stage | Measured | Budget | Headroom |
+|---|---|---|---|
+| Router | 2.56s | 10s | 74% |
+| **Answer** | **24.83s** | **30s** | **17%** ⚠️ |
+| Server total | 27.40s | — | — |
+| Client abort | — | 45s | 39% |
+
+**The answer budget is the tight one, not the client's 45s.** 24.8s is 83% of its allowance, and the true worst case is likely higher: recorded fixtures show answer prompts up to 4,051 tokens (this was 2,758) and up to 836 thought tokens (this was 634). A heavier question plausibly reaches 30s.
+
+⚠️ **This also settles that 15s was never viable** — the healthy call needs 24.8s, so the old budget was ~40% of what the work actually takes.
+
+**Two further consequences, neither yet acted on:**
+
+- **Headroom cannot be bought by redeploy alone.** Router 10s + answer 30s = 40s must stay under the APK's baked-in 45s. Trimming the router to 8s buys the answer 35s (41% headroom) without a rebuild; anything beyond that needs a new APK.
+- **28 seconds is a long time to stand in front of a judge.** This is a UX problem independent of correctness, and streaming is out of scope (§8). The existing answer is §5.6's **pre-seeded `demo-cache.json`**: rehearsed questions become instant *and* free, and are immune to quota, rate limits and provider outages. This incident raises its priority from insurance to demo-critical.
+
 #### Cold start is a non-issue — measured, not assumed
 
 Vercel Functions scale to zero, so "does not sleep" deserved a number rather than a reassurance. **First hit on a fresh deployment: 520ms end-to-end, including parsing the 1.18 MB corpus.** Warm: 240–570ms. There is no waking-container penalty of the kind a sleeping free-tier host imposes, and the answer path costs seconds anyway.
