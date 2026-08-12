@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v1",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "What was the Prophet's ﷺ character like?",
+    "recordedAt": "2026-08-12T01:29:33.515Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad ﷺ was characterized by profound mercy and compassion, extending his concern to his entire Ummah, women, and even those who disbelieved or caused him harm. He never sought personal revenge for himself, choosing instead to forgive those who wronged him, as exemplified by his prayer for the people of Ta'if and his forgiveness of those who injured him in battle. His commitment to justice was absolute; he upheld Allah's laws impartially, declaring that even his own daughter would face punishment if she committed theft. He was deeply burdened by the suffering of others, always praying for their guidance and well-being, and was gentle and considerate, particularly towards women, even shortening prayers out of concern for a mother's distress.",
+      "citations": [
+        "672b3e8ed458540020750eab",
+        "672c82436fa080001f6a18fc",
+        "672c93c01c9a6f001f8eec39",
+        "672c8b7d1c9a6f001f8eea5c",
+        "67347128bd8a1c00203035a7"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\"answer\": \"The Prophet Muhammad ﷺ was characterized by profound mercy and compassion, extending his concern to his entire Ummah, women, and even those who disbelieved or caused him harm. He never sought personal revenge for himself, choosing instead to forgive those who wronged him, as exemplified by his prayer for the people of Ta'if and his forgiveness of those who injured him in battle. His commitment to justice was absolute; he upheld Allah's laws impartially, declaring that even his own daughter would face punishment if she committed theft. He was deeply burdened by the suffering of others, always praying for their guidance and well-being, and was gentle and considerate, particularly towards women, even shortening prayers out of concern for a mother's distress.\",\"citations\": [\"672b3e8ed458540020750eab\", \"672c82436fa080001f6a18fc\", \"672c93c01c9a6f001f8eec39\", \"672c8b7d1c9a6f001f8eea5c\", \"67347128bd8a1c00203035a7\"]}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 2758,
+        "candidatesTokenCount": 277,
+        "totalTokenCount": 3669,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 2758
+          }
+        ],
+        "thoughtsTokenCount": 634,
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "eMx7arzRLvHYvdIPzciDqQU"
+    }
+  }
+}

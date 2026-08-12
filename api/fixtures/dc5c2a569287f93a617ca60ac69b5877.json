@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "ur",
+    "question": "حضورﷺ کے ذاتی انتقام نہ لینے والی حدیث کے الفاظ لکھیں",
+    "recordedAt": "2026-08-12T01:29:20.076Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "in_corpus",
+      "candidateIds": [
+        "672b3e8ed458540020750eab"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"672b3e8ed458540020750eab\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13996,
+        "candidatesTokenCount": 49,
+        "totalTokenCount": 14045,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13996
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "bsx7avblO9GtxN8PrrLFqAs"
+    }
+  }
+}

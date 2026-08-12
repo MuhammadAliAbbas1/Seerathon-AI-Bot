@@ -346,6 +346,21 @@ Architecture consequences that hold regardless of the exact numbers:
 
 **The hard rule:** a quota, safety, or provider failure must **never** degrade into answering. If the router says `in_corpus` and the answer call fails, we return the 503 service message — never a partial, unvalidated, or from-memory answer. A system failure must not produce an unsourced religious claim (§2).
 
+#### The failure path may not lie about why it failed
+
+A stronger rule, and a general one — **a system whose entire value is not saying things it cannot stand behind cannot have its failure path lie about why it failed.**
+
+Two categories, and they must not be conflated:
+
+| Cause | Response | Because |
+|-------|----------|---------|
+| Routing outcome (`out_of_corpus`, `ruling_seeking`) or a **citation validation failure** (§5.3) | the fixed fallback / refusal copy | true: we have nothing we can stand behind |
+| **System failure** — quota, timeout, transport, safety or `recitation` block, truncated JSON | **HTTP 503 with a typed code** | true: our call broke |
+
+The tempting mistake is to let a truncated or blocked generation fall through to the `out_of_corpus` copy, because it looks more graceful than an error. It is not graceful, it is **false**: that copy says "I could not find anything in the collection that covers this", when in fact the router *did* find the material and our own generation failed. A bot that misreports the cause of its own failure has the same defect, in miniature, as one that invents a hadith — it is stating something it does not know to be true because the alternative is less comfortable.
+
+So: never widen the fallback copy to cover system failures, however much better the UX looks.
+
 #### Provider adapter
 
 Exactly two methods. Everything provider-specific lives behind them; no other file mentions Gemini or OpenRouter.

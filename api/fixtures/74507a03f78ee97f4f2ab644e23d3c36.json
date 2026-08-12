@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "en",
+    "question": "Reproduce the full timeline entry for the Blessed Birth.",
+    "recordedAt": "2026-08-12T01:29:26.196Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "in_corpus",
+      "candidateIds": [
+        "6720dac1205912001e0bed87"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"6720dac1205912001e0bed87\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13992,
+        "candidatesTokenCount": 47,
+        "totalTokenCount": 14039,
+        "cachedContentTokenCount": 13063,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13992
+          }
+        ],
+        "cacheTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13063
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "dMx7atiiNaKa28oP04et-A8"
+    }
+  }
+}

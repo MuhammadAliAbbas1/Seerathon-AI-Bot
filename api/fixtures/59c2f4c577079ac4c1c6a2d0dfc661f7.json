@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "en",
+    "question": "Quote the hadith about the Prophet ﷺ never taking personal revenge, word for word.",
+    "recordedAt": "2026-08-12T01:29:12.348Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "in_corpus",
+      "candidateIds": [
+        "672b3e8ed458540020750eab"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"672b3e8ed458540020750eab\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13998,
+        "candidatesTokenCount": 49,
+        "totalTokenCount": 14047,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13998
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "Z8x7asS7BKia28oPwIf0uQU"
+    }
+  }
+}

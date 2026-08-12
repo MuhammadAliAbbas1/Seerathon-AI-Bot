@@ -38,6 +38,25 @@ export interface AskFailure {
 
 export type AskResult = AskSuccess | AskFailure;
 
+/**
+ * Route reasons that mean "our call broke", not "the corpus has nothing".
+ *
+ * The router fails closed to out_of_corpus for all of these — correct, because
+ * it must never fail toward answering — but the USER-FACING text has to be
+ * honest about which happened (§5.6). `keyword-ratchet`, `model` and
+ * `no-valid-candidates` are genuine outcomes and keep the fallback copy.
+ */
+const SYSTEM_FAILURE_REASONS = new Set([
+  "provider-quota",
+  "provider-timeout",
+  "provider-transport",
+  "provider-http",
+  "model-blocked",
+  "model-empty",
+  "model-malformed",
+  "model-off-enum",
+]);
+
 export interface AskOptions {
   provider: LlmProvider;
   /** Client hint. The server may override from detected language (§5.4). */
@@ -100,6 +119,22 @@ export async function ask(question: string, opts: AskOptions): Promise<AskResult
   // ── 1. Route first, always (§5.2) ─────────────────────────────────────────
   const routed = await route(question, { provider: opts.provider });
   const language = routed.language;
+
+  // The router fails closed to out_of_corpus on a SYSTEM failure as well as on
+  // a genuine classification. Those two must not produce the same user-facing
+  // text: telling someone "I could not find anything in the collection" when we
+  // were actually rate-limited is precisely the lie §5.6 forbids. Surface the
+  // system failures as failures.
+  if (SYSTEM_FAILURE_REASONS.has(routed.reason)) {
+    const quota = routed.reason === "provider-quota";
+    return {
+      ok: false,
+      code: quota ? "quota_exhausted" : "provider_unavailable",
+      language,
+      message: quota ? S.QUOTA_EXHAUSTED[language] : S.SERVICE_ERROR[language],
+      retryAfterSeconds: quota ? 30 : 10,
+    };
+  }
 
   // Refusals cost ZERO further requests — three of the four rubric behaviours
   // never touch the answering model at all.

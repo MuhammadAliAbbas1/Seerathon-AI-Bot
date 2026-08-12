@@ -113,6 +113,19 @@ export function withFixtures(inner: LlmProvider, modeOverride?: "off" | "record"
     if (mode !== "record") throw new MissingFixtureError(key, question);
 
     const outcome = await run();
+
+    // NEVER record a transient failure. A 429, a timeout or a dropped
+    // connection is a property of the moment, not of the question — baking one
+    // in would replay it forever and permanently poison that case. We learned
+    // this the hard way: a Phase 3 batch exhausted RPM mid-run and wrote five
+    // quota failures as though they were results.
+    //
+    // Blocked and malformed ARE recorded: those are reproducible model
+    // behaviour and exactly the failure fixtures we want.
+    if (!outcome.ok && (outcome.failure === "quota" || outcome.failure === "timeout" || outcome.failure === "transport")) {
+      return outcome;
+    }
+
     writeFixture(key, {
       meta: {
         op,

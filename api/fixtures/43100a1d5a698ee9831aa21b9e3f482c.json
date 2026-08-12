@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v1",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "Reproduce the full timeline entry for the Blessed Birth.",
+    "recordedAt": "2026-08-12T01:29:28.254Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad ﷺ was born in Makkah al-Mukarramah at dawn on Monday, the 12th of Rabi' al-Awwal, which corresponds to April 20, 571 CE. This event took place approximately 55 days after the Incident of As-hab-al-Feel. His father, Sayyiduna Abdullah, who was known for his excellent character and appearance, passed away at the age of 25 before the Prophet's birth. His mother, Sayyidatuna Aminah, who was highly regarded among the Quraysh women for her noble lineage and honor, then raised him.",
+      "citations": [
+        "6720dac1205912001e0bed87"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\"answer\": \"The Prophet Muhammad ﷺ was born in Makkah al-Mukarramah at dawn on Monday, the 12th of Rabi' al-Awwal, which corresponds to April 20, 571 CE. This event took place approximately 55 days after the Incident of As-hab-al-Feel. His father, Sayyiduna Abdullah, who was known for his excellent character and appearance, passed away at the age of 25 before the Prophet's birth. His mother, Sayyidatuna Aminah, who was highly regarded among the Quraysh women for her noble lineage and honor, then raised him.\", \"citations\": [\"6720dac1205912001e0bed87\"]}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 687,
+        "candidatesTokenCount": 166,
+        "totalTokenCount": 942,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 687
+          }
+        ],
+        "thoughtsTokenCount": 89,
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "dsx7apm2I7OgvdIP6O7s4Q0"
+    }
+  }
+}

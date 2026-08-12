@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "en",
+    "question": "How did he ﷺ treat women?",
+    "recordedAt": "2026-08-12T01:29:42.732Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "in_corpus",
+      "candidateIds": [
+        "672c93c01c9a6f001f8eec39",
+        "672c9bff1c9a6f001f8eed57"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"672c93c01c9a6f001f8eec39\",\n    \"672c9bff1c9a6f001f8eed57\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13988,
+        "candidatesTokenCount": 74,
+        "totalTokenCount": 14062,
+        "cachedContentTokenCount": 13063,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13988
+          }
+        ],
+        "cacheTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13063
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "hcx7asX6JraexN8Pze6sIQ"
+    }
+  }
+}

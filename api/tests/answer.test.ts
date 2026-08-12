@@ -285,3 +285,41 @@ describe("fixed copy", () => {
     assert.match(S.RULING_SEEKING.ur, /عالم/);
   });
 });
+
+describe("system failure at the ROUTING stage is reported, not disguised", () => {
+  // Found live: a 429 on the router made the pipeline emit "I could not find
+  // anything in the collection", which is false — we were rate-limited. The
+  // router still fails closed to out_of_corpus (correct); the user-facing text
+  // must not pretend that was a considered answer.
+  const routerFails = (failure: "quota" | "timeout" | "transport" | "http"): LlmProvider => ({
+    id: "fake",
+    classifyModel: "c",
+    answerModel: "a",
+    classify: () => Promise.resolve({ ok: false, failure, detail: "x" } as ProviderOutcome),
+    answer: () => Promise.resolve(answered("never", [])),
+  });
+
+  it("router 429 becomes quota_exhausted, not a false 'not in corpus'", async () => {
+    const r = await ask(Q, { provider: routerFails("quota") });
+    assert.equal(r.ok, false);
+    if (r.ok) return;
+    assert.equal(r.code, "quota_exhausted");
+  });
+
+  it("router timeout becomes provider_unavailable", async () => {
+    const r = await ask(Q, { provider: routerFails("timeout") });
+    assert.equal(r.ok, false);
+    if (r.ok) return;
+    assert.equal(r.code, "provider_unavailable");
+  });
+
+  it("a GENUINE out_of_corpus still gets the honest fallback copy", async () => {
+    const r = await ask(Q, {
+      provider: twoStage({ ok: true, data: { mode: "out_of_corpus", candidateIds: [] }, raw: {} }, answered("x", [])),
+    });
+    assert.equal(r.ok, true);
+    if (!r.ok) return;
+    assert.equal(r.mode, "out_of_corpus");
+    assert.equal(r.answer, S.OUT_OF_CORPUS.en);
+  });
+});

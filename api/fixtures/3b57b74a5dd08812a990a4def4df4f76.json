@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v1",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "Give me the exact wording of the narration about his ﷺ patience.",
+    "recordedAt": "2026-08-12T01:29:18.308Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "When asked by Khabbab ibn al-Aratt to supplicate against the polytheists due to the intense suffering they inflicted upon the Muslims, the Prophet Muhammad ﷺ responded by reminding them of the severe trials faced by previous communities, where people endured extreme torture like having their flesh separated from their bones or being split in two, yet remained firm in their faith. He then assured them that Allah would bring this religion to completion, leading to a time of peace and security where a traveler could journey without fear.",
+      "citations": [
+        "672b449ad458540020750f9f"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\"answer\": \"When asked by Khabbab ibn al-Aratt to supplicate against the polytheists due to the intense suffering they inflicted upon the Muslims, the Prophet Muhammad ﷺ responded by reminding them of the severe trials faced by previous communities, where people endured extreme torture like having their flesh separated from their bones or being split in two, yet remained firm in their faith. He then assured them that Allah would bring this religion to completion, leading to a time of peace and security where a traveler could journey without fear.\", \"citations\": [\"672b449ad458540020750f9f\"]}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 724,
+        "candidatesTokenCount": 134,
+        "totalTokenCount": 1111,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 724
+          }
+        ],
+        "thoughtsTokenCount": 253,
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "bMx7atS9DrvDvdIPsL7WuQg"
+    }
+  }
+}
