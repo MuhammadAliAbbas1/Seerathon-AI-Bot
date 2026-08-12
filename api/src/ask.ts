@@ -34,6 +34,8 @@ export interface AskFailure {
   language: Language;
   message: string;
   retryAfterSeconds: number;
+  /** Diagnostic only. Logged server-side, NEVER sent over the wire. */
+  reason?: string;
 }
 
 export type AskResult = AskSuccess | AskFailure;
@@ -133,6 +135,7 @@ export async function ask(question: string, opts: AskOptions): Promise<AskResult
       language,
       message: quota ? S.QUOTA_EXHAUSTED[language] : S.SERVICE_ERROR[language],
       retryAfterSeconds: quota ? 30 : 10,
+      reason: `route:${routed.reason}${routed.detail ? ` ${routed.detail}` : ""}`,
     };
   }
 
@@ -154,7 +157,11 @@ export async function ask(question: string, opts: AskOptions): Promise<AskResult
     outcome = await opts.provider.answer({ question, language, entries });
   } catch (err) {
     if ((err as Error)?.name === "MissingFixtureError") throw err;
-    return { ok: false, code: "provider_unavailable", language, message: S.SERVICE_ERROR[language], retryAfterSeconds: 10 };
+    return {
+      ok: false, code: "provider_unavailable", language,
+      message: S.SERVICE_ERROR[language], retryAfterSeconds: 10,
+      reason: `answer:threw ${(err as Error)?.name ?? "Error"}`,
+    };
   }
 
   if (!outcome.ok) {
@@ -162,7 +169,11 @@ export async function ask(question: string, opts: AskOptions): Promise<AskResult
     // outage are reported honestly; they are NOT turned into a fallback that
     // looks like a considered refusal.
     if (outcome.failure === "quota") {
-      return { ok: false, code: "quota_exhausted", language, message: S.QUOTA_EXHAUSTED[language], retryAfterSeconds: 30 };
+      return {
+        ok: false, code: "quota_exhausted", language,
+        message: S.QUOTA_EXHAUSTED[language], retryAfterSeconds: 30,
+        reason: outcome.detail ?? "answer:quota",
+      };
     }
     // Everything else — blocked (including `recitation`), truncated JSON,
     // timeout, transport — is a SYSTEM failure, and is reported as one.
@@ -173,7 +184,11 @@ export async function ask(question: string, opts: AskOptions): Promise<AskResult
     // material, and we failed to render it. Telling a user the corpus lacks
     // something when our own generation broke is a small lie in a system whose
     // entire value is not saying things it cannot stand behind.
-    return { ok: false, code: "provider_unavailable", language, message: S.SERVICE_ERROR[language], retryAfterSeconds: 10 };
+    return {
+      ok: false, code: "provider_unavailable", language,
+      message: S.SERVICE_ERROR[language], retryAfterSeconds: 10,
+      reason: outcome.detail ?? `answer:${outcome.failure}`,
+    };
   }
 
   // ── 4. Validate before anything reaches the user ──────────────────────────

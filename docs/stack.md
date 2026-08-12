@@ -202,3 +202,13 @@ This document is maintained, not archived. When something here stops being true,
   The general lesson, which is the one worth carrying: **"it works locally" and "it works deployed" are different claims about different systems**, and the gap between them is made of exactly the assumptions that never get stated — where config comes from, which files exist, what the toolchain runs. A stack review that says "not deployed yet" is describing an unknown, not a small remaining task.
 
   All four rubric behaviours are now verified *through* the deployment, along with the quota path — a real Gemini 429 became a typed 503 with calm copy in 0.65s, a behaviour previously only exercised offline.
+
+- **2026-08-12 (amended again)** — **the same lesson, one layer down, within the hour.** The fix for the inverted timeout ladder set a single 15s budget for both models, sized from the *router's* 1.3–2.3s latency. The answer model is a thinking model whose healthy calls run 10–25s, so 15s sat inside the normal range. The in-corpus demo chip failed on a real device: 34.8s, two answer timeouts either side of a pointless retry.
+
+  Three things worth carrying:
+
+  **Testing on the real device against the real deployment is what caught it.** Nothing local would have: the offline suite replays fixtures and never waits, and the ladder was internally consistent — the ordering was right, only the magnitude was wrong. This is Phase 3.5's lesson repeating exactly one layer down. **Deferring verification concentrates risk rather than deferring it**, and the verification that matters is the one performed on the artifact you will actually ship, over the network you will actually use.
+
+  **It failed preferentially on the best content.** Answer latency scales with citation count, so the better the corpus covers a question, the likelier it was to time out. A cap tuned on thin questions passes every casual test and breaks on the demo. Sampling matters as much as measuring.
+
+  **A dashboard is not an oracle.** Vercel reported "No outgoing requests" for an invocation that had certainly made one — captured legacy servers are not covered by its fetch instrumentation. The reasoning that actually held was arithmetic: 3.3 + 15 + 1.5 + 15 matching a logged 34,796 ms to within 200 ms. When a tool's summary and your own numbers disagree, find out which one is measuring.

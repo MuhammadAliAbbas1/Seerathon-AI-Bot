@@ -473,7 +473,34 @@ This is not only a quota saving. A suite that replays offline in ~2s gets run be
 1. **`config.ts` read only `.env`, which by design never exists on a server.** Every request would have thrown on a missing key. The source is now chosen **once, all-or-nothing** — never merged per-key, because per-key fallback is exactly what silently reaches for the stale ambient key (§5.6). On Vercel a `.env` file is **refused outright** rather than merely deprioritised (`VERCEL=1` is checked), so a stray upload cannot flip production onto the dev project's key. `.vercelignore` excludes `.env*` as defence in depth. **`/api/health` reports `configSource`** so the active source is checkable rather than assumed.
 2. **`corpus.json` was read via `readFileSync` from a path computed at runtime**, which Vercel's file tracer cannot see — it would not have been uploaded, and the first question would have crashed on `ENOENT`. It is now a **static JSON import** the bundler can follow. Confirmed in the build output as `corpus.mjs`, and `/api/health` reports 154 entries from the live deployment.
 3. **TypeScript 7 removed `ts.sys`**, which Vercel's build-time typecheck calls — the build crashed inside `@vercel/backends` with an unhelpful `Cannot read properties of undefined (reading 'readFile')`. **Pinned to `typescript@5.9.3`.** Do not upgrade to 7.x without re-testing the deploy.
-4. **The timeout ladder was inverted.** The Gemini client allowed 60s while the app aborted at 45s, so a hung provider would have reached the user as a *generic network error* instead of the typed 503 the server was about to send — the failure path lying about why it failed, one layer out (§5.6). Now 15s per provider call; worst case ≈33.5s server-side < 45s client < platform limit. Derived, not guessed, in `api/src/timeouts.ts`.
+4. **The timeout ladder was inverted.** The Gemini client allowed 60s while the app aborted at 45s, so a hung provider would have reached the user as a *generic network error* instead of the typed 503 the server was about to send — the failure path lying about why it failed, one layer out (§5.6). Fixed by pinning the ordering in `api/src/timeouts.ts`. ⚠️ **The first fix got the ordering right and the magnitude wrong — see §5.8.**
+
+#### 5.8 The 15-second regression, and the two rules it produced
+
+**2026-08-12, found on a real device against the real deployment.** The in-corpus demo chip returned the generic error. Log: `503 34796ms`, on a cold start.
+
+That 34,796 ms is our own timer, which brackets `handleAsk` alone — so it excludes cold start, body read and rate limiting, and the only thing inside it that can consume time is a provider call. It decomposes exactly:
+
+| Step | Budget | Cumulative |
+|---|---|---|
+| Router call (`flash-lite`, cold) | — | ~3.3s |
+| Answer attempt 1 | 15s | 18.3s |
+| Blind retry sleep | 1.5s | 19.8s |
+| Answer attempt 2 | 15s | **34.8s** → 503 |
+
+**Cause: one timeout constant governed both models, and it was sized from the router's latency.** The comment in `timeouts.ts` justified 15s as "roughly 7× the observed router time" — true of the router, and meaningless for the answer model. `gemini-2.5-flash` is a **thinking** model: measured from fixture `usageMetadata`, 89–836 thought tokens plus 88–330 output tokens per answer, which puts a *healthy* call in the 10–25s band. 15s sat inside the normal range, not above it.
+
+⚠️ **Answer latency scales with citation count** (capped at `MAX_CANDIDATES = 5`): more entries → longer prompt → more thinking → slower. So this failed **preferentially on WELL-COVERED questions** — the ones the corpus serves best. The in-corpus demo chip is the single most likely thing to trigger it, and a cap tuned on thin questions looks fine right up until the demo. **Any future timeout tuning must be derived from the ANSWER path's worst case, never the router's.**
+
+**Rule 1 — timeouts are per-model, never shared.** The two models differ by more than an order of magnitude. `ROUTER_TIMEOUT_MS = 10s`, `ANSWER_TIMEOUT_MS = 30s`. A test asserts they cannot collapse back into one number.
+
+**Rule 2 — retry transport errors, NEVER timeouts.** A transport error (refused connection, DNS, dropped socket) is a property of the moment, fails fast, and often succeeds on a second try. A timeout is not: it means the model needed more time than we allowed, so retrying grants it *the identical budget* and fails identically. It is not free either — Gemini still processes and bills the abandoned request, so the retry buys a second charge, a second slot against the rate limit, and double the time to a failure that was already certain. **Worse than useless.** It is what turned an 18s failure into a 34.8s one and spent two answer requests to return one error.
+
+**Rule 3 — a failure must name its own cause in the logs.** Diagnosing this needed a full reconstruction from timing arithmetic to recover something the process knew at the time. Every provider call now logs `op`, model, attempt, elapsed, budget and outcome (plus token counts on success), and the 503 log line carries the diagnostic — as a *sibling* of the response body, so it is never sent to a client.
+
+⚠️ **`CLIENT_TIMEOUT_MS` is baked into the shipped APK and cannot be changed without a rebuild.** It is a fixed ceiling the server budget must fit under, not a free variable to raise when the server wants more room. Current ladder: server worst case 40s < client 45s < platform ≥60s.
+
+**A misreading worth recording.** Vercel's dashboard reported **"No outgoing requests"** for that invocation, which looked like decisive evidence the call never reached Gemini. It was not evidence at all: a captured ("legacy") root `server.ts` is not covered by Vercel's automatic `fetch` instrumentation, so the panel is silent about our egress in general. The router call had certainly succeeded — it is the only way to reach the answer call. `/api/health?deep=1` now proves egress independently, at zero Gemini cost.
 
 #### Cold start is a non-issue — measured, not assumed
 
@@ -492,6 +519,15 @@ The check runs **after** body parsing, deliberately: no provider call can preced
 **`rate_limited` is a distinct error code from `quota_exhausted`.** Different cause — ours versus the provider's — identical calm rendering (§12.2). Conflating them would make the logs lie about which limit was hit.
 
 ⚠️ **A spend cap is still not set.** On the free tier the quota is the cap (§5.4), so this is currently sound; it becomes load-bearing the moment billing is enabled.
+
+#### `/api/health` — what it is allowed to tell you
+
+It is **public**: the URL ships inside the APK and the repo goes public at submission. So it reports what is checkable without disclosing anything.
+
+- `configSource` — `dotenv` or `environment`, so the active source is checkable rather than assumed.
+- `geminiKey` / `openrouterKey` — `{ present, length, fingerprint, wellFormed }`. The fingerprint is the first 8 hex of `sha256(key)`. ⚠️ **Deliberately not the usual first-6/last-4**, which would publish 10 characters of a live key to anyone who asks. A truncated hash answers the questions we actually have — *is this the same key I have locally? did it arrive intact?* — and nothing else. `present` alone was the previous answer and meant only "non-empty", which reassures without informing: an empty-string bug, the dev key and the demo key all looked identical.
+- `timeouts` — the whole ladder, so an inversion is visible from outside.
+- `?deep=1` — probes egress against the organizers' corpus API (unauthenticated, free, already a dependency). ⚠️ Sends **no** `Authorization` header, since that endpoint 403s on any (§4). Costs zero Gemini quota and settles whether an empty "outgoing requests" panel means anything.
 
 ---
 

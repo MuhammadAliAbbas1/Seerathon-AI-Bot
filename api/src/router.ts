@@ -27,8 +27,13 @@ function refuse(language: Language, detected: RouteResult["detected"], reason: R
   return { mode: "ruling_seeking", language, detected, candidateIds: [], reason };
 }
 
-function fallback(language: Language, detected: RouteResult["detected"], reason: RouteReason): RouteResult {
-  return { mode: "out_of_corpus", language, detected, candidateIds: [], reason };
+function fallback(
+  language: Language,
+  detected: RouteResult["detected"],
+  reason: RouteReason,
+  detail?: string
+): RouteResult {
+  return { mode: "out_of_corpus", language, detected, candidateIds: [], reason, detail };
 }
 
 /** Maps a provider failure onto a reason. Every branch ends at out_of_corpus. */
@@ -87,11 +92,14 @@ export async function route(question: string, opts: RouteOptions): Promise<Route
     // that does anyway — including MissingFixtureError, which should surface
     // as a test failure rather than as an answered question.
     if ((err as Error)?.name === "MissingFixtureError") throw err;
-    return fallback(language, detected, "provider-transport");
+    return fallback(language, detected, "provider-transport", `classify:threw ${(err as Error)?.name ?? "Error"}`);
   }
 
   if (!outcome.ok) {
-    return fallback(language, detected, reasonForFailure(outcome));
+    // outcome.detail carries the provider's own account: op, model, attempt,
+    // elapsed and the budget it was given. That is what turns "it failed" into
+    // "the answer model timed out at 30s on attempt 1".
+    return fallback(language, detected, reasonForFailure(outcome), outcome.detail);
   }
 
   // ── 3. Validate the shape in code ─────────────────────────────────────────

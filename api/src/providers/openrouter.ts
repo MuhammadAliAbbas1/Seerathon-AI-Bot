@@ -1,5 +1,5 @@
 import { requireEnv } from "../config.ts";
-import { PROVIDER_TIMEOUT_MS, RETRY_DELAY_MS } from "../timeouts.ts";
+import { ANSWER_TIMEOUT_MS, RETRY_DELAY_MS, ROUTER_TIMEOUT_MS } from "../timeouts.ts";
 import { ANSWER_SCHEMA, ROUTER_SCHEMA, buildAnswerPrompt, buildRouterPrompt } from "../prompts.ts";
 import type {
   AnswerRequest,
@@ -25,8 +25,16 @@ const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
  */
 export const OPENROUTER_MODEL = "google/gemma-4-26b-a4b-it:free";
 
-async function call(prompt: string, maxTokens: number, attempt = 1, schema: unknown = ROUTER_SCHEMA): Promise<ProviderOutcome> {
+async function call(
+  prompt: string,
+  maxTokens: number,
+  attempt = 1,
+  schema: unknown = ROUTER_SCHEMA,
+  op = "classify",
+  timeoutMs = ROUTER_TIMEOUT_MS
+): Promise<ProviderOutcome> {
   const key = requireEnv("OPENROUTER_API_KEY");
+  const startedAt = Date.now();
   const body = {
     model: OPENROUTER_MODEL,
     messages: [{ role: "user", content: prompt }],
@@ -47,20 +55,30 @@ async function call(prompt: string, maxTokens: number, attempt = 1, schema: unkn
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify(body),
-      // Same ladder as Gemini (timeouts.ts). Was 120s, which was longer than
-      // the platform would even allow the function to run.
-      signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+      // Per-OP timeout, same ladder as Gemini (timeouts.ts). Was 120s — longer
+      // than the platform would even allow the function to run.
+      signal: AbortSignal.timeout(timeoutMs),
     });
     status = res.status;
     raw = await res.json();
   } catch (err) {
     const name = (err as Error)?.name;
-    const failure: ProviderFailure = name === "TimeoutError" || name === "AbortError" ? "timeout" : "transport";
-    if (attempt === 1) {
+    const timedOut = name === "TimeoutError" || name === "AbortError";
+    const failure: ProviderFailure = timedOut ? "timeout" : "transport";
+    const elapsed = Date.now() - startedAt;
+    console.log(`  [openrouter] ${op} model=${OPENROUTER_MODEL} attempt=${attempt} elapsed=${elapsed}ms budget=${timeoutMs}ms -> ${failure}`);
+    // Retry transport, never a timeout — see the Gemini client for why. Kept
+    // identical here deliberately: a fallback that behaves differently under
+    // failure is a fallback that has to be re-learned during an incident.
+    if (attempt === 1 && !timedOut) {
       await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
-      return call(prompt, maxTokens, 2, schema);
+      return call(prompt, maxTokens, 2, schema, op, timeoutMs);
     }
-    return { ok: false, failure, detail: `${name}: ${(err as Error)?.message ?? ""}` };
+    return {
+      ok: false,
+      failure,
+      detail: `${op}:${failure} attempt=${attempt} elapsed=${elapsed}ms budget=${timeoutMs}ms`,
+    };
   }
 
   if (status === 429) return { ok: false, failure: "quota", detail: "429 rate limited", raw };
@@ -107,7 +125,7 @@ export function createOpenRouterProvider(): LlmProvider {
       return call(buildRouterPrompt(req.question, req.language, req.index), 2048);
     },
     answer(req: AnswerRequest): Promise<ProviderOutcome> {
-      return call(buildAnswerPrompt(req.question, req.language, req.entries), 8192, 1, ANSWER_SCHEMA);
+      return call(buildAnswerPrompt(req.question, req.language, req.entries), 8192, 1, ANSWER_SCHEMA, "answer", ANSWER_TIMEOUT_MS);
     },
   };
 }

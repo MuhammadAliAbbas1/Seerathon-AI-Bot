@@ -23,11 +23,46 @@ import { handleAsk } from "./api/src/http.ts";
 import { createGeminiProvider } from "./api/src/providers/gemini.ts";
 import { createOpenRouterProvider } from "./api/src/providers/openrouter.ts";
 import { loadCorpus } from "./api/src/corpus.ts";
-import { configSource, providerId, readEnv } from "./api/src/config.ts";
+import { configSource, describeKey, providerId, readEnv } from "./api/src/config.ts";
 import { checkRateLimit, clientIp } from "./api/src/rate-limit.ts";
 import { answerLanguage, detectLanguage } from "./api/src/language.ts";
 import { QUOTA_EXHAUSTED } from "./api/src/strings.ts";
-import { CLIENT_TIMEOUT_MS, FUNCTION_MAX_DURATION_S, PROVIDER_TIMEOUT_MS } from "./api/src/timeouts.ts";
+import {
+  ANSWER_TIMEOUT_MS,
+  CLIENT_TIMEOUT_MS,
+  FUNCTION_MAX_DURATION_S,
+  ROUTER_TIMEOUT_MS,
+} from "./api/src/timeouts.ts";
+
+/**
+ * Prove outbound HTTP works, without spending a Gemini request.
+ *
+ * Targets the organizers' corpus API: unauthenticated, free, and already a
+ * dependency of this project. ⚠️ Sends NO Authorization header — that endpoint
+ * rejects ANY Authorization header with 403 "Token Unauthorized!" (§4), which
+ * would make a working egress path look broken.
+ */
+async function probeEgress(): Promise<Record<string, unknown>> {
+  const url = "https://api.islamicdesk.com/api/seerathon/corpus/meta";
+  const started = Date.now();
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(5_000) });
+    const body = (await res.json()) as { error?: boolean };
+    return {
+      ok: res.status === 200 && body?.error !== true,
+      status: res.status,
+      elapsedMs: Date.now() - started,
+      host: "api.islamicdesk.com",
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: (err as Error)?.name ?? "Error",
+      elapsedMs: Date.now() - started,
+      host: "api.islamicdesk.com",
+    };
+  }
+}
 
 // No fixture layer in production: a deployed backend answers questions, it
 // does not replay a test corpus. (§5.6's pre-seeded demo cache is a separate,
@@ -57,8 +92,16 @@ const server = createServer(async (req, res) => {
   const path = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`).pathname;
 
   if (req.method === "GET" && (path === "/api/health" || path === "/")) {
+    const deep = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`).searchParams.has("deep");
     json(res, 200, {
       ok: true,
+      // ?deep=1 proves EGRESS works, at zero Gemini cost. It also settles a
+      // question this deployment got wrong once: Vercel's dashboard reported
+      // "no outgoing requests" for an invocation that had definitely made
+      // one, because a captured ("legacy") server is not covered by automatic
+      // fetch instrumentation. An absent panel entry is therefore not
+      // evidence about our code — this check is.
+      egress: deep ? await probeEgress() : "skipped (add ?deep=1)",
       // §5.4: the project cannot be derived from the key, so label it and
       // check the label before demoing.
       deployEnv: readEnv("DEPLOY_ENV") ?? "unset",
@@ -67,13 +110,15 @@ const server = createServer(async (req, res) => {
       // set" is exactly the thing that is easy to assume and expensive to be
       // wrong about — see api/src/config.ts.
       configSource: configSource(),
-      // Presence only. The value never leaves the server.
-      geminiKey: readEnv("GEMINI_API_KEY") ? "present" : "MISSING",
-      openrouterKey: readEnv("OPENROUTER_API_KEY") ? "present" : "MISSING",
+      // Length + a truncated hash, never the value — see describeKey().
+      geminiKey: describeKey("GEMINI_API_KEY"),
+      openrouterKey: describeKey("OPENROUTER_API_KEY"),
       corpusVersion: corpus.corpusVersion,
       entries: corpus.counts.total,
       timeouts: {
-        providerMs: PROVIDER_TIMEOUT_MS,
+        routerMs: ROUTER_TIMEOUT_MS,
+        answerMs: ANSWER_TIMEOUT_MS,
+        serverWorstCaseMs: ROUTER_TIMEOUT_MS + ANSWER_TIMEOUT_MS,
         clientMs: CLIENT_TIMEOUT_MS,
         functionMaxS: FUNCTION_MAX_DURATION_S,
       },
@@ -126,7 +171,8 @@ const server = createServer(async (req, res) => {
   const started = Date.now();
   try {
     const out = await handleAsk(parsed, provider);
-    console.log(`  ${out.status}  ${Date.now() - started}ms  ${ip}`);
+    // The diagnostic is a sibling of the body and is logged, never sent.
+    console.log(`  ${out.status}  ${Date.now() - started}ms  ${ip}${out.diagnostic ? `  ${out.diagnostic}` : ""}`);
     json(res, out.status, out.body);
   } catch (err) {
     // handleAsk is built not to throw (§5.2) — every provider failure is an

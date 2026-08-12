@@ -15,6 +15,14 @@ import type { Language } from "./types.ts";
 export interface HttpResponse {
   status: number;
   body: unknown;
+  /**
+   * Server-side diagnostic for the log line. Deliberately a SIBLING of `body`
+   * rather than a field inside it: it must never cross the wire. It names
+   * which call failed, on which model, after how long, against what budget —
+   * so the next incident explains itself instead of needing a reconstruction
+   * from timing arithmetic.
+   */
+  diagnostic?: string;
 }
 
 const isLanguage = (v: unknown): v is Language => v === "en" || v === "ur";
@@ -54,6 +62,7 @@ export async function handleAsk(rawBody: unknown, provider: LlmProvider): Promis
           retryAfterSeconds: result.retryAfterSeconds,
         },
       },
+      diagnostic: result.reason,
     };
   }
 

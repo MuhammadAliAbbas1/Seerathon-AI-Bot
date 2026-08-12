@@ -49,4 +49,10 @@ export interface RouteResult {
   /** Always [] unless mode is in_corpus. Every id here exists and has a body. */
   candidateIds: string[];
   reason: RouteReason;
+  /**
+   * The provider's own account of what went wrong — op, model, attempt,
+   * elapsed, budget. Diagnostic only: logged server-side, never sent over the
+   * wire and never shown to a user.
+   */
+  detail?: string;
 }

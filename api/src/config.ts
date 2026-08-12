@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -100,6 +101,41 @@ export function requireEnv(name: string): string {
     );
   }
   return v;
+}
+
+export interface KeyReport {
+  present: boolean;
+  length: number;
+  /** First 8 hex of sha256(key). Compare, don't reconstruct. */
+  fingerprint: string;
+  /** API keys are printable ASCII with no whitespace. Catches a pasted newline. */
+  wellFormed: boolean;
+}
+
+/**
+ * A checkable description of a secret, without disclosing any of it.
+ *
+ * `"present"` was the previous answer and it only ever meant "non-empty",
+ * which reassures without informing — an empty-string bug and a correct key
+ * look identical, and so do the dev key and the demo key.
+ *
+ * ⚠️ Deliberately NOT first-6/last-4, which is the usual convention and is what
+ * we use when reading keys in a terminal. **`/api/health` is public** — the
+ * backend URL ships inside an APK and the repo goes public at submission — so
+ * that convention would publish 10 characters of a live key to anyone who
+ * asks. A truncated hash answers every question we actually have of it ("is
+ * this the same key I have locally?", "did it arrive intact?") and answers
+ * nothing else.
+ */
+export function describeKey(name: string): KeyReport {
+  const v = readEnv(name);
+  if (!v) return { present: false, length: 0, fingerprint: "", wellFormed: false };
+  return {
+    present: true,
+    length: v.length,
+    fingerprint: createHash("sha256").update(v, "utf8").digest("hex").slice(0, 8),
+    wellFormed: /^[\x21-\x7e]+$/.test(v),
+  };
 }
 
 /** gemini | openrouter. Switching providers is config, never a code change (§5.6). */
