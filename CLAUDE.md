@@ -322,6 +322,8 @@ Rate limits are **per project, not per API key** (confirmed in docs) and appear 
 
 ⚠️ **The ~9.7k routing-index estimate in §4B was optimistic by roughly 40%.** That figure was a character-based heuristic; the real tokenizer plus the instruction block puts a routing call at ~14k. Not a problem — TPM is nowhere near binding at this size — but do not size anything else off the old estimate.
 
+**Generalise that:** every character-based token estimate in this file (§4B's whole table included) runs **roughly 40% optimistic** against Gemini's real tokenizer. They were useful for choosing an architecture and they are not safe for sizing a budget. Anything that actually matters — prompt budgets, TPM headroom, cost projections — gets **measured from `usageMetadata` on a real response**, not estimated. Fixtures already carry it, so the measurement is free once a fixture exists.
+
 Architecture consequences that hold regardless of the exact numbers:
 
 - **Refusals cost one request, not two.** If the router returns `out_of_corpus` or `ruling_seeking` there is no second call. Three of four rubric behaviours are refusals, and adversarial suites are mostly hostile questions.

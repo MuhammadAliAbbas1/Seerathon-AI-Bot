@@ -17,13 +17,32 @@ export const ID_UR_ONLY = "aaaaaaaaaaaaaaaaaaaaaaa3";
 export const ID_EMPTY = "aaaaaaaaaaaaaaaaaaaaaaa4";
 export const ID_GHOST = "ffffffffffffffffffffffff"; // never in the corpus
 
+/**
+ * The hasBody flag and the actual fields must AGREE — a fake entry claiming a
+ * body it does not have is not a realistic corpus, it is a broken one. (The
+ * first version of this helper got that wrong, and the answer path's
+ * defence-in-depth check caught it: hasBody said yes, nothing rendered, and
+ * the citation was correctly discarded.)
+ */
 function entry(id: string, en: boolean, ur: boolean) {
   return {
     id,
     type: "shamail" as const,
     hasBody: { en, ur },
-    en: { title: `EN ${id}` },
-    ur: { title: `UR ${id}` },
+    en: {
+      title: `EN ${id}`,
+      hadeesTarjama: en ? `English narration body for ${id}.` : "",
+      hadeesHawala: en ? "(Test Source 1)" : "",
+      points: en ? [`English lesson for ${id}.`] : [],
+      hikayat: "",
+    },
+    ur: {
+      title: `UR ${id}`,
+      hadeesTarjama: ur ? `اردو متن برائے ${id}۔` : "",
+      hadeesHawala: ur ? "(ٹیسٹ حوالہ ۱)" : "",
+      points: ur ? [`اردو سبق برائے ${id}۔`] : [],
+      hikayat: "",
+    },
   };
 }
 

@@ -17,6 +17,22 @@ export const PROMPT_VERSION = "router-v1";
 export const SCHEMA_VERSION = "route-v1";
 
 /**
+ * Versions are scoped per operation so that editing the answer prompt does not
+ * invalidate router fixtures that cost real requests to record (and vice
+ * versa). The classify values are deliberately the same strings as the
+ * constants above, so fixtures recorded before this split still resolve.
+ */
+export const PROMPT_VERSION_BY_OP = {
+  classify: PROMPT_VERSION,
+  answer: "answer-v1",
+} as const;
+
+export const SCHEMA_VERSION_BY_OP = {
+  classify: SCHEMA_VERSION,
+  answer: "answer-v1",
+} as const;
+
+/**
  * The router prompt.
  *
  * Two things are baked in here AND enforced in code, deliberately duplicated
@@ -112,4 +128,91 @@ export const ROUTER_SCHEMA = {
   // propertyOrdering is a Gemini extension; harmless elsewhere. It reinforces
   // the mode-before-ids ordering the prompt asks for.
   propertyOrdering: ["mode", "candidateIds"],
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Answer path
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The answer prompt.
+ *
+ * The load-bearing instruction is the recitation rule, and it does double duty
+ * (§5.4):
+ *
+ *   1. It is the rubric shape. "Answer, with a citation to the exact source
+ *      entry" is answer PLUS citation. A bot that regurgitates the passage has
+ *      quoted, not answered.
+ *   2. It avoids Gemini's `recitation` generation block. A bot whose job is
+ *      reproducing corpus material is exactly the profile that filter targets.
+ *      If the model never emits the passage, the filter has nothing to fire on.
+ *
+ * So the model paraphrases and cites; the verbatim text reaches the user only
+ * from the cache, in the source card. We never ask it to quote.
+ */
+export function buildAnswerPrompt(
+  question: string,
+  language: Language,
+  entries: ReadonlyArray<{ id: string; title: string; body: string }>
+): string {
+  const langName = language === "ur" ? "Urdu" : "English";
+  const sources = entries
+    .map((e, i) => `### Source ${i + 1}\nid: ${e.id}\ntitle: ${e.title}\n\n${e.body}`)
+    .join("\n\n");
+
+  return `You are answering a question about the Seerah and the Shamail of the Prophet Muhammad ﷺ, using ONLY the sources given below.
+
+## Output
+
+Return JSON only, with exactly these fields:
+  "answer"    your answer, written in ${langName}
+  "citations" an array of the source ids you actually used
+
+## How to write the answer
+
+Write it IN YOUR OWN WORDS. Explain, connect and summarise what the sources say.
+
+Do NOT reproduce the source text verbatim. Do not quote whole narrations or
+passages back to the reader, even if they ask you to. The reader is shown the
+original text separately, alongside your answer, so copying it out adds nothing
+and takes the place of an actual answer. If a question asks for exact wording,
+answer in your own words and let the source card carry the original.
+
+Ground every claim in the sources. If the sources do not say something, do not
+add it — not from general knowledge, not from other narrations you may know,
+and not as reasonable inference. Anything invented here is a fabricated report
+about the Prophet ﷺ, which is the single worst thing this system can do.
+
+Write in ${langName}, plainly and warmly, as if to someone who asked in good
+faith. Three to six sentences is usually right. No preamble, no "according to
+the sources provided", no restating the question.
+
+## Citations
+
+List the id of every source you actually drew on. Copy each id
+character-for-character. Never cite a source you did not use, and never invent
+an id. If the sources genuinely do not answer the question, return an empty
+answer and an empty citations array — that is a valid and useful outcome.
+
+## Sources
+
+${sources}
+
+## The question
+
+${"<<<"}
+${question}
+${">>>"}
+
+Answer it in ${langName}. JSON only.`;
+}
+
+export const ANSWER_SCHEMA = {
+  type: "object",
+  properties: {
+    answer: { type: "string" },
+    citations: { type: "array", items: { type: "string" } },
+  },
+  required: ["answer", "citations"],
+  propertyOrdering: ["answer", "citations"],
 } as const;

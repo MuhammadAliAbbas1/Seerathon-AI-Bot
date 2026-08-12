@@ -1,5 +1,5 @@
 import { requireEnv } from "../config.ts";
-import { ROUTER_SCHEMA, buildRouterPrompt } from "../prompts.ts";
+import { ANSWER_SCHEMA, ROUTER_SCHEMA, buildAnswerPrompt, buildRouterPrompt } from "../prompts.ts";
 import type {
   AnswerRequest,
   ClassifyRequest,
@@ -149,13 +149,18 @@ export function createGeminiProvider(): LlmProvider {
       });
     },
 
-    answer(_req: AnswerRequest): Promise<ProviderOutcome> {
-      // Phase 3. Deliberately not stubbed with a fake success — a silent
-      // placeholder on the answer path is exactly the failure §5.2 forbids.
-      return Promise.resolve({
-        ok: false,
-        failure: "http",
-        detail: "answer() not implemented until Phase 3",
+    answer(req: AnswerRequest): Promise<ProviderOutcome> {
+      return call({
+        model: GEMINI_ANSWER_MODEL,
+        prompt: buildAnswerPrompt(req.question, req.language, req.entries),
+        schema: ANSWER_SCHEMA,
+        // Sized generously ON PURPOSE. gemini-2.5-flash is a thinking model and
+        // thinking is charged against the output budget — we have already
+        // observed a 16-token cap produce finishReason=MAX_TOKENS on a
+        // two-character reply. A tight limit here truncates the JSON
+        // mid-object, which surfaces as `malformed` and discards a perfectly
+        // good answer.
+        maxOutputTokens: 8192,
       });
     },
   };

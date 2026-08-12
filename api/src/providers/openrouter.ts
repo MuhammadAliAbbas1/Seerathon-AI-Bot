@@ -1,5 +1,5 @@
 import { requireEnv } from "../config.ts";
-import { ROUTER_SCHEMA, buildRouterPrompt } from "../prompts.ts";
+import { ANSWER_SCHEMA, ROUTER_SCHEMA, buildAnswerPrompt, buildRouterPrompt } from "../prompts.ts";
 import type {
   AnswerRequest,
   ClassifyRequest,
@@ -24,7 +24,7 @@ const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
  */
 export const OPENROUTER_MODEL = "google/gemma-4-26b-a4b-it:free";
 
-async function call(prompt: string, maxTokens: number, attempt = 1): Promise<ProviderOutcome> {
+async function call(prompt: string, maxTokens: number, attempt = 1, schema: unknown = ROUTER_SCHEMA): Promise<ProviderOutcome> {
   const key = requireEnv("OPENROUTER_API_KEY");
   const body = {
     model: OPENROUTER_MODEL,
@@ -33,7 +33,7 @@ async function call(prompt: string, maxTokens: number, attempt = 1): Promise<Pro
     temperature: 0,
     response_format: {
       type: "json_schema",
-      json_schema: { name: "route", strict: true, schema: ROUTER_SCHEMA },
+      json_schema: { name: "result", strict: true, schema },
     },
   };
 
@@ -55,7 +55,7 @@ async function call(prompt: string, maxTokens: number, attempt = 1): Promise<Pro
     const failure: ProviderFailure = name === "TimeoutError" || name === "AbortError" ? "timeout" : "transport";
     if (attempt === 1) {
       await new Promise((r) => setTimeout(r, 1500));
-      return call(prompt, maxTokens, 2);
+      return call(prompt, maxTokens, 2, schema);
     }
     return { ok: false, failure, detail: `${name}: ${(err as Error)?.message ?? ""}` };
   }
@@ -103,12 +103,8 @@ export function createOpenRouterProvider(): LlmProvider {
     classify(req: ClassifyRequest): Promise<ProviderOutcome> {
       return call(buildRouterPrompt(req.question, req.language, req.index), 2048);
     },
-    answer(_req: AnswerRequest): Promise<ProviderOutcome> {
-      return Promise.resolve({
-        ok: false,
-        failure: "http",
-        detail: "answer() not implemented until Phase 3",
-      });
+    answer(req: AnswerRequest): Promise<ProviderOutcome> {
+      return call(buildAnswerPrompt(req.question, req.language, req.entries), 8192, 1, ANSWER_SCHEMA);
     },
   };
 }

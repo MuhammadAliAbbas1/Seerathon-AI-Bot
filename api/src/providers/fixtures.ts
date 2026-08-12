@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { REPO_ROOT, fixtureMode } from "../config.ts";
-import { PROMPT_VERSION, SCHEMA_VERSION } from "../prompts.ts";
+import { PROMPT_VERSION_BY_OP, SCHEMA_VERSION_BY_OP } from "../prompts.ts";
 import type { AnswerRequest, ClassifyRequest, LlmProvider, ProviderOutcome } from "./types.ts";
 
 export const FIXTURE_DIR = join(REPO_ROOT, "api", "fixtures");
@@ -31,8 +31,8 @@ export function fixtureKey(parts: {
     parts.op,
     parts.provider,
     parts.model,
-    PROMPT_VERSION,
-    SCHEMA_VERSION,
+    PROMPT_VERSION_BY_OP[parts.op],
+    SCHEMA_VERSION_BY_OP[parts.op],
     parts.language,
     parts.question.normalize("NFC").replace(/\s+/g, " ").trim(),
   ]);
@@ -118,8 +118,8 @@ export function withFixtures(inner: LlmProvider, modeOverride?: "off" | "record"
         op,
         provider: inner.id,
         model,
-        promptVersion: PROMPT_VERSION,
-        schemaVersion: SCHEMA_VERSION,
+        promptVersion: PROMPT_VERSION_BY_OP[op],
+        schemaVersion: SCHEMA_VERSION_BY_OP[op],
         language,
         question,
         recordedAt: new Date().toISOString(),
