@@ -557,6 +557,16 @@ Run against the live Gemini API on project `268175794480`. Full detail in §5.6.
 
 Reference screenshots in `docs/design-reference/` (the live **Seerat Ki Duniya** app — the Seerah app our widget is meant to live inside). Extracted 2026-08-12. **This section governs Phase 4. It is documentation, not a licence to start building UI.**
 
+### 12.0 Font and RTL — VERIFIED ON DEVICE, 2026-08-12
+
+Settled by installing the Phase 1(c) APK on real hardware. **Do not bundle a font.**
+
+- ✅ **U+FDFA (ﷺ) renders as a full calligraphic ligature.** No tofu. The escaped and literal forms are identical, so there is no file-encoding issue either.
+- ✅ **RTL is correct** — Urdu titles right-aligned, multi-line Urdu stacks right, and the mixed-direction case renders `(صحیح بخاری حدیث 3560)` with `3560` intact and correctly positioned. That was the case most likely to break, and it doesn't.
+- ❌ **No bundled font needed.** This removes ~200–500 KB from the APK and closes the §7.1 font risk. Revisit only if a future device shows otherwise.
+
+**One cosmetic item for Phase 4:** the ﷺ ligature is tall enough to crowd the line above it in Urdu body text. Fix with `lineHeight` on Urdu text styles — it is a spacing adjustment, not a font problem. §12.1 already calls for ~1.7 line height on Urdu; treat that as a floor, not a target.
+
 ### 12.1 What the reference actually looks like
 
 **One sentence:** warm, paper-like and unhurried — cream grounds instead of stark white, deep forest green for authority, gold for reverence, generous rounded geometry and a lot of breathing room. It reads as a modern learning app wearing the visual manners of Islamic devotional print: calm and respectful, never clinical and never "techy".
