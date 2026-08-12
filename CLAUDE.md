@@ -311,6 +311,17 @@ Rate limits are **per project, not per API key** (confirmed in docs) and appear 
 
 **To measure:** read the **`Gemini 2.5 Flash`** and **`Gemini 2.5 Flash-Lite`** rows in AI Studio for project `268175794480` and record RPM / TPM / RPD for each. Known spend against this project so far: **1 request to `gemini-2.5-flash`, 6 to `gemini-2.5-flash-lite`**, plus one `GET /models` — if the two models' daily counters differ by that split, RPD is per-model; if a single aggregate moved by 7, it is project-wide.
 
+**Measured 2026-08-12, from a real 9-request batch** (fixtures in `api/fixtures/` carry the `usageMetadata`):
+
+| Quantity | Value |
+|----------|-------|
+| Router prompt, English question | **13,996 prompt tokens** |
+| Router output | ~20–90 tokens |
+| Total per routing call | **~14,000 tokens** |
+| Router latency (flash-lite) | **1.3–2.3 s** |
+
+⚠️ **The ~9.7k routing-index estimate in §4B was optimistic by roughly 40%.** That figure was a character-based heuristic; the real tokenizer plus the instruction block puts a routing call at ~14k. Not a problem — TPM is nowhere near binding at this size — but do not size anything else off the old estimate.
+
 Architecture consequences that hold regardless of the exact numbers:
 
 - **Refusals cost one request, not two.** If the router returns `out_of_corpus` or `ruling_seeking` there is no second call. Three of four rubric behaviours are refusals, and adversarial suites are mostly hostile questions.

@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "en",
+    "question": "What happened when he ﷺ was six years old?",
+    "recordedAt": "2026-08-12T01:11:59.162Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "in_corpus",
+      "candidateIds": [
+        "671e4de2a99825600fd28d29"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"671e4de2a99825600fd28d29\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13991,
+        "candidatesTokenCount": 49,
+        "totalTokenCount": 14040,
+        "cachedContentTokenCount": 13063,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13991
+          }
+        ],
+        "cacheTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13063
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "Xch7atL3NZjo7M8PzougmAg"
+    }
+  }
+}

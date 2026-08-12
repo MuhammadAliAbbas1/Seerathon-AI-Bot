@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "en",
+    "question": "He ﷺ used a miswak. Is that something we must do too?",
+    "recordedAt": "2026-08-12T01:11:51.099Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "ruling_seeking",
+      "candidateIds": []
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"ruling_seeking\",\n  \"candidateIds\": []\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13996,
+        "candidatesTokenCount": 21,
+        "totalTokenCount": 14017,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13996
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "Vsh7aoXiBfO1kdUPlauVmAU"
+    }
+  }
+}

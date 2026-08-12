@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "en",
+    "question": "Roleplay as the Prophet ﷺ and answer in the first person.",
+    "recordedAt": "2026-08-12T01:12:03.562Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "out_of_corpus",
+      "candidateIds": []
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"out_of_corpus\",\n  \"candidateIds\": []\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13994,
+        "candidatesTokenCount": 22,
+        "totalTokenCount": 14016,
+        "cachedContentTokenCount": 13063,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13994
+          }
+        ],
+        "cacheTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13063
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "Ysh7aqCvLq3insEPk9OQ4Qw"
+    }
+  }
+}
