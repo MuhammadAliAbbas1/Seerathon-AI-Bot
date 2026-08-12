@@ -2,6 +2,19 @@
 
 Read this file at the start of every session before doing anything else.
 
+> ## ⚠️ How to edit THIS file
+>
+> This file is the **single point of failure for context across a session reset**. Everything an agent knows about why this project is built the way it is lives here. Losing it does not lose code — it loses the reasoning, which is the expensive half.
+>
+> **Never open it for writing until the replacement content is fully built in memory.**
+>
+> This is not hypothetical. A script did `open(path, 'w')` and then threw on an encoding error while writing — the open had already truncated the file to **0 bytes**, and the exception meant nothing was written back. It was recovered from the last commit, but *only* because the previous edits happened to be committed. Between commits, git does not cover you.
+>
+> - **Prefer the Edit tool** (exact string replacement) over any script. It cannot half-write.
+> - If a script is genuinely necessary: build the whole string, **write to a temp file, verify it parses and is a plausible length, then move it into place.** An atomic rename cannot leave a partial file.
+> - **Commit before large restructures**, so the recovery path exists.
+> - After any scripted edit, check `wc -l` — a file that got shorter when it should have grown is the symptom.
+
 ---
 
 ## 1. What this project is
@@ -785,6 +798,14 @@ Run against the live Gemini API on project `268175794480`. Full detail in §5.6.
 
 Reference screenshots in `docs/design-reference/` (the live **Seerat Ki Duniya** app — the Seerah app our widget is meant to live inside). Extracted 2026-08-12. **This section governs Phase 4. It is documentation, not a licence to start building UI.**
 
+> ⚠️ **This section is a SUMMARY of the screenshots, not the screenshots. Re-open the images before building a surface; do not trust the prose here.**
+>
+> It was extracted in one pass and has already been wrong once. §12.1 described the language control as a *segmented pill*; the reference actually uses a **switch** — `UR ●— EN`, labels flanking a track with a sliding knob. That shipped as a pill, at 24dp, on a §7.1 rubric control, until someone looked at the screenshot again while building something else.
+>
+> The failure mode is specific and worth naming: **a summary written from an image is lossy in ways the summary itself cannot record.** It reads as authoritative precisely because it is confident and specific. Anything it got wrong will stay wrong for as long as people read the prose instead of the picture.
+>
+> So, when building any surface: **open the relevant screenshot in `docs/design-reference/` first, and correct this section wherever it disagrees.** Surfaces that did not exist when §12 was written — the sources sheet, copy affordances, any modal — have *no* coverage here at all and must be derived from the images directly.
+
 ### 12.0 Font and RTL — VERIFIED ON DEVICE, 2026-08-12
 
 Settled by installing the Phase 1(c) APK on real hardware. **Do not bundle a font.**
@@ -815,6 +836,8 @@ Settled by installing the Phase 1(c) APK on real hardware. **Do not bundle a fon
 | Divider / track | `#E6E2D8` | hairlines, progress tracks |
 
 Note the split: the **logo** is teal + gold, but the **UI** is green + gold. Follow the UI. Teal appears nowhere in the product chrome.
+
+⚠️ **Correction, 2026-08-13 — the language control is a SWITCH, not a pill.** Re-read from `screen1.jpeg` while building the header: `UR` and `EN` labels flank a white rounded track containing a solid green knob, with the active label in primary green and the inactive in `textSoft`. It is not two halves of a segmented pill. Built as a switch; the knob slides toward the language that is ON, which is the unambiguous convention — **the screenshot could not settle which side the reference puts it on, and that remains unverified.**
 
 **Typography.** English is a rounded geometric sans with double-storey `a` and soft terminals (Nunito/Quicksand family — match the characteristics, don't chase the exact licence). Screen titles ~23px bold; card titles ~18px semibold; body ~15–16px regular at ~1.55 line height; meta ~13px in secondary grey; stat numbers ~30px bold in primary green. Urdu is naskh, noticeably larger than the English at the same rank (Urdu needs ~1.15–1.25× the size and ~1.7 line height to stay legible), and `ﷺ` renders as a true calligraphic ligature — **their app does render U+FDFA**, which is a useful signal for our Phase 1(c) font check. English and Urdu are never mixed mid-sentence in chrome; the app switches wholesale via a **`UR / EN` pill toggle in the header**, which is the pattern we should copy for §7.1.
 
