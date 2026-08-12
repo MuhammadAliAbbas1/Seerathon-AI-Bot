@@ -233,6 +233,17 @@ All guardrail logic, routing, and citation validation live server-side. A modifi
 
 Every field on a citation is read from the **cached corpus after validation**, never copied from the model's output — the model supplies an id and nothing else. `title` and `text` come from the same language block as `language`, so a source card can never mix scripts.
 
+⚠️ **Citation count is a SAFETY parameter, not a latency knob. Do not trim it for speed.**
+
+Measured 2026-08-12, same question, thinking off, entries the only variable:
+
+| Entries sent | Latency | Longest verbatim run |
+|---|---|---|
+| 5 | 2,527ms | **7 words** |
+| 3 | 2,121ms | **10 words** |
+
+**Fewer entries produced *more* verbatim reproduction.** This is counterintuitive and it is the opposite of what a "send less, go faster" optimisation assumes: with less material to synthesise, the model leans harder on individual sentences, pushing it toward reproducing them. Cutting `MAX_CANDIDATES` would therefore buy ~400ms by degrading the exact property this section exists to protect — and it would also show the user fewer source cards, which is the rubric's evidence. **Keep it at 5.** If it is ever changed, the verbatim-run check must be re-measured, not assumed.
+
 **Design rule: the model never generates corpus text.** The `answer` is always the model's **own words** — framing, connecting, summarising. Verbatim corpus material (hadith translations, hawala references, timeline prose) is **only ever read from the cache and rendered in the source card**, never produced by the model. This is deliberate and does double duty:
 
 1. **It is the rubric shape.** "Answer, with a citation to the exact source entry" is answer *plus* citation — a bot that simply regurgitates the passage has not answered, it has quoted.
@@ -449,6 +460,15 @@ Prefer the Gemini lever: it buys headroom on the provider our tests actually cov
 
 This is not only a quota saving. A suite that replays offline in ~2s gets run before every commit as §7.2 requires; one that costs 8 minutes of rate-limit waiting gets skipped precisely when we are rushing — which is when we are most likely to have broken the router.
 
+⚠️ **Record REPRODUCIBLE outcomes only — an allowlist, never a denylist.** Recordable: `ok`, `blocked`, `empty`, `malformed`, which are properties of the question and the model. Everything else — `quota`, `timeout`, `transport`, **any HTTP status** — is a property of the moment and must be re-run.
+
+This has now bitten **twice**, and the second time is the instructive one. The guard was first written as a denylist of `{quota, timeout, transport}` after a Phase 3 batch exhausted RPM and wrote five quota failures as results. That denylist did not cover `http`, so a Gemini **HTTP 503** was recorded for the prompt-extraction case **F8** — which then replayed in 2ms forever, reporting `out_of_corpus` with `reason: provider-http`. **F8 sat in the adversarial suite looking passed, without once being tested, from the moment it was recorded until 2026-08-12.** Re-run for real, it passes properly (`reason: model`, 0 citations).
+
+Two rules follow:
+
+- **A denylist of transient failures is always one failure mode behind reality.** An allowlist of reproducible ones cannot be. Three tests pin this, including one that scans the committed fixtures for poisoned entries so the artifacts are guarded and not only the code path.
+- **Check `reason`, not just `mode`.** A refusal for the wrong reason is not a pass — it is the fail-closed path firing, which proves the safety net works and proves nothing about the case. This is the same distinction §5.6's failure-path rule draws, appearing in the test suite instead of the response.
+
 **Optional, and worth it:** run the redundant ruling-check *only* in record mode, where we are spending requests deliberately. Disagreement between it and the router is a signal the router prompt needs work — redundancy where it is cheap, absent where it is expensive.
 
 #### Response caching
@@ -531,7 +551,17 @@ Re-run live against the deployment, on the **exact in-corpus demo chip** that fa
 
 The log named the cause: `thoughts=634` on the answer call — more tokens of reasoning than of output (277), on a task that does no reasoning. By the time the answer call runs, the router has already decided mode, precedence, candidate entries and language. The answer model receives up to five **pre-selected, pre-validated** entries and synthesises them. That is composition, not deliberation.
 
-⚠️ **The router was never thinking.** `gemini-2.5-flash-lite` defaults thinking OFF, and all 15 recorded classify fixtures show `thoughtsTokenCount: 0`. So the *judgment* half of this pipeline already made every decision that matters without thinking, in 2.5s, on a prompt 5× larger. Setting a thinking budget on the router would turn it **on** and slow down the only call that was already fast. `ANSWER_THINKING_BUDGET = 0` applies to the answer call alone; the router's config is deliberately left unset.
+🚫 **DO NOT "keep thinking on for the router" — it was never on, and turning it on is a regression.**
+
+This is written as a prohibition because it was a real instruction, given in good faith, and following it would have slowed the only fast call in the pipeline. `gemini-2.5-flash-lite` defaults thinking **OFF**, and all 15 recorded classify fixtures show `thoughtsTokenCount: 0`. The *judgment* half of this pipeline — mode, precedence, candidates, language — already makes every decision that matters **without thinking**, in 2.5s, on a prompt 5× larger than the answer call's. `ANSWER_THINKING_BUDGET = 0` applies to the answer call alone, and the router's `thinkingConfig` is **deliberately left unset**; setting it to any value, including one intended as "keep it as it is", turns thinking on.
+
+#### What to measure when touching the answer path
+
+Prose quality is the least informative signal available, and it is the one a casual review reaches for first.
+
+**Measure citation bookkeeping.** If a change degrades the model's care over *which ids it returns*, §5.3 discards the entire answer — so the symptom is **not a worse answer, it is the bot refusing a question it should have answered.** That looks like conservatism rather than a bug, it is invisible in a read-through of one answer, and it damages the behaviour the whole project is built to get right (§2). Assert `returned == valid` and `returned ⊆ candidates`, across several questions and both languages.
+
+The other two, in order: **longest verbatim run** against the entries actually sent (§5.4), and only then whether the prose reads well. `api/scripts/thinking-experiment.ts` reports all three per call.
 
 **Measured, same question and entries, on the deployment:**
 
@@ -658,14 +688,18 @@ Two things Phase 0 flagged that will otherwise bite:
 
 Do not build these. Do not suggest them. If I ask for one, remind me it's on this list.
 
-- User authentication / accounts
-- Persisted chat history across sessions
-- Streaming token-by-token responses — **re-examined 2026-08-12 and still excluded, now on evidence rather than assumption.** The original exclusion assumed answers were fast; they were briefly 25s, which voided that premise. Root cause was thinking, not generation (§5.9), and the answer path is now 2.2s / 5.4s end to end, so there is nothing left to stream. Note for honesty: a safe streaming design *does* exist — emit and validate `citations` before any prose, since all three §5.3 checks are id-based — so the objection is cost/benefit, not impossibility. Naive streaming remains forbidden: §5.3 discards the whole answer on any bad citation, and streamed text cannot be un-said.
-- Dark mode, theming, settings pages
-- Admin panel or content management
-- Analytics dashboards
-- Vector database / embeddings (see 4B)
-- Multi-turn conversation memory beyond what's needed for a coherent demo
+**Every exclusion carries its reopening condition.** A scope decision is a conclusion drawn from premises, and premises expire — streaming was excluded on the assumption that answers were fast, and that exclusion silently survived a period when answers took 25 seconds, which was precisely the condition that should have reopened it. An exclusion recorded without its *why* cannot be noticed going stale. So each line below says what would make it wrong.
+
+| Excluded | Why | What would reopen it |
+|---|---|---|
+| User authentication / accounts | Nothing in the rubric needs identity, and accounts drag in storage, privacy and a login surface | A requirement to attribute or persist per-user state — not currently on any roadmap |
+| Persisted chat history across sessions | The demo is a single session; storage buys nothing a judge will see | Same as above |
+| **Streaming token-by-token responses** | **Re-examined 2026-08-12 and still excluded, now on evidence.** Root cause of the 25s answer was thinking, not generation (§5.9); the path is now 2.2s / 5.4s end to end, so there is nothing left to stream | The answer path exceeding ~10s again for a reason that is genuinely generation. ⚠️ Note for honesty: a safe design *does* exist — emit and validate `citations` before any prose, since all three §5.3 checks are id-based — so the objection is cost/benefit, not impossibility. **Naive streaming stays forbidden regardless**: §5.3 discards the whole answer on any bad citation, and streamed text cannot be un-said |
+| Dark mode, theming, settings pages | §12 specifies one warm, paper-like surface; a theme system multiplies the RTL and Urdu-rendering surface for no rubric credit | Never, for this submission |
+| Admin panel or content management | The corpus is read-only and baked at build time | The organizers shipping a mutable corpus |
+| Analytics dashboards | No audience for them before judging | Never, for this submission |
+| Vector database / embeddings | 154 entries fit in a single prompt as a routing index (§4B) — RAG machinery solves a problem we do not have | The corpus growing by roughly an order of magnitude, so the index no longer fits a prompt |
+| Multi-turn conversation memory beyond a coherent demo | The rubric scores single-question behaviour, and history complicates the guardrail router's input | A judge follow-up pattern that visibly breaks without it during rehearsal |
 
 ---
 

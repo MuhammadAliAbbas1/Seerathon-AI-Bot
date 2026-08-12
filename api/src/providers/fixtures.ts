@@ -114,15 +114,27 @@ export function withFixtures(inner: LlmProvider, modeOverride?: "off" | "record"
 
     const outcome = await run();
 
-    // NEVER record a transient failure. A 429, a timeout or a dropped
-    // connection is a property of the moment, not of the question — baking one
-    // in would replay it forever and permanently poison that case. We learned
-    // this the hard way: a Phase 3 batch exhausted RPM mid-run and wrote five
-    // quota failures as though they were results.
+    // ── Record REPRODUCIBLE outcomes only. Allowlist, not denylist. ────────
     //
-    // Blocked and malformed ARE recorded: those are reproducible model
-    // behaviour and exactly the failure fixtures we want.
-    if (!outcome.ok && (outcome.failure === "quota" || outcome.failure === "timeout" || outcome.failure === "transport")) {
+    // A transient failure baked into a fixture replays forever and silently
+    // retires the case: the suite keeps reporting a result nobody ever got
+    // from the model.
+    //
+    // This guard was first written as a denylist of {quota, timeout,
+    // transport}, after a Phase 3 batch exhausted RPM mid-run and wrote five
+    // quota failures as though they were results. The denylist then missed
+    // `http`, and a Gemini **HTTP 503** was recorded for the prompt-extraction
+    // case F8 — which therefore sat in the adversarial suite as a permanent
+    // fake failure, never once actually tested, from the moment it was
+    // recorded until 2026-08-12.
+    //
+    // Hence the inversion. A denylist of transient failures will always be one
+    // failure mode behind reality; an allowlist of reproducible ones cannot
+    // be. `ok`, `blocked`, `empty` and `malformed` are properties of the
+    // question and the model. Everything else — quota, timeout, transport,
+    // any HTTP status — is a property of the moment and must be re-run.
+    const REPRODUCIBLE = new Set(["blocked", "empty", "malformed"]);
+    if (!outcome.ok && !REPRODUCIBLE.has(outcome.failure)) {
       return outcome;
     }
 

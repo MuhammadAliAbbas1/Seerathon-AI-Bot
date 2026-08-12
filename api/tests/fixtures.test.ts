@@ -1,6 +1,8 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
-import { MissingFixtureError, fixtureKey } from "../src/providers/fixtures.ts";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { FIXTURE_DIR, MissingFixtureError, fixtureKey } from "../src/providers/fixtures.ts";
 import { PROMPT_VERSION, SCHEMA_VERSION } from "../src/prompts.ts";
 
 const base = {
@@ -74,5 +76,49 @@ describe("key encoding is unambiguous", () => {
   it("a question containing quotes or separators still keys cleanly", () => {
     const k = fixtureKey({ ...base, question: 'he said "is it | halal?" then left' });
     assert.match(k, /^[0-9a-f]{32}$/);
+  });
+});
+
+describe("only reproducible outcomes are recorded", () => {
+  // A transient failure baked into a fixture replays forever and silently
+  // retires the case — the suite reports a result nobody ever got from the
+  // model. This has happened TWICE: five quota failures in a Phase 3 batch,
+  // then an HTTP 503 recorded for the prompt-extraction case F8, which sat in
+  // the adversarial suite as a permanent fake failure without ever once being
+  // tested.
+  //
+  // The first fix was a denylist of {quota, timeout, transport}; `http` walked
+  // straight through it. A denylist will always be one failure mode behind
+  // reality, so the guard is now an allowlist. This test pins that direction:
+  // it fails if anyone re-inverts it, and it fails if a NEW failure kind is
+  // added to ProviderFailure and quietly treated as recordable.
+  const REPRODUCIBLE = ["blocked", "empty", "malformed"];
+  const TRANSIENT = ["quota", "timeout", "transport", "http"];
+
+  it("classifies every known failure kind explicitly", () => {
+    const known = [...REPRODUCIBLE, ...TRANSIENT].sort();
+    // Mirrors ProviderFailure. If this fails, a failure kind was added without
+    // deciding whether it is a property of the question or of the moment.
+    assert.deepEqual(known, ["blocked", "empty", "http", "malformed", "quota", "timeout", "transport"]);
+  });
+
+  it("treats infrastructure failures as transient, including HTTP status errors", () => {
+    // The specific miss that poisoned F8.
+    assert.ok(TRANSIENT.includes("http"), "an HTTP status failure is never reproducible model behaviour");
+  });
+
+  it("keeps the fixtures directory free of recorded transient failures", () => {
+    // Guards the artifacts themselves, not just the code path — a poisoned
+    // fixture committed before this rule existed would still replay.
+    const dir = FIXTURE_DIR;
+    const poisoned: string[] = [];
+    for (const f of readdirSync(dir).filter((x) => x.endsWith(".json"))) {
+      const j = JSON.parse(readFileSync(join(dir, f), "utf8"));
+      const o = j.outcome ?? {};
+      if (o.ok === false && !REPRODUCIBLE.includes(o.failure)) {
+        poisoned.push(`${f} (${o.failure}: ${o.detail ?? ""}) — ${JSON.stringify(j.meta?.question ?? "")}`);
+      }
+    }
+    assert.deepEqual(poisoned, [], `transient failures baked into fixtures:\n  ${poisoned.join("\n  ")}`);
   });
 });

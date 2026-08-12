@@ -221,4 +221,26 @@ This document is maintained, not archived. When something here stops being true,
 
   **The scoping decision in §8 had gone stale without anyone noticing.** Streaming was excluded when answers were assumed fast, and that exclusion silently survived a period when answers took 25 seconds — precisely the condition that would have justified revisiting it. Scope decisions carry premises, and premises expire. §8 now records *why* streaming is excluded and what would change it, rather than only that it is.
 
-  Worth stating plainly: measuring 3 vs 5 citation entries showed fewer entries made verbatim reproduction **worse** (7 → 10 word runs), because a model with less material to synthesise leans harder on individual sentences. That was not the expected direction, and it is the reason the obvious "send less, go faster" optimisation was rejected.
+  Worth stating plainly: measuring 3 vs 5 citation entries showed fewer entries made verbatim reproduction **worse** (7 → 10 word runs), because a model with less material to synthesise leans harder on individual sentences. That was not the expected direction, and it is the reason the obvious "send less, go faster" optimisation was rejected. It also reclassified citation count as a *safety* parameter rather than a performance one, which is now recorded in §5.4 so nobody trims it for speed later.
+
+---
+
+## The lesson this project should keep
+
+If one paragraph of this document survives, it should be this one.
+
+**Raising the timeout made the failure stop while leaving the system barely working.** The in-corpus path was taking 24.8 seconds against a 30-second budget. Every check passed. The demo chip returned a correct, well-cited answer. The incident was closed, the numbers were recorded, and the honest summary was "verified fixed" — which it was, for the failure that had been reported.
+
+And the system was still spending twenty-two seconds per question on reasoning it did not need.
+
+**The question "why does this take 25 seconds at all?" was available the entire time.** Nothing hid it. The token counts were in the log line. The router was sitting there answering a harder question, on a five-times-larger prompt, in a tenth of the time. It did not get asked because the reported problem was *a timeout*, and once a timeout stops firing, a timeout-shaped investigation is finished. The fix satisfied the bug report and stopped there.
+
+Three habits fall out of that, and they generalise past this project:
+
+- **Distinguish "the failure stopped" from "the system is good."** These feel identical at the moment a red thing turns green, and they are not the same claim. A budget that is 83% consumed is a system that barely works, and "83% consumed" was written down at the time, correctly, and treated as a passing grade rather than as the finding it was.
+
+- **Ask what the work actually is before tuning the allowance for it.** The answer call was given more time; nobody asked what it was doing with the time it had. When the question was finally put — by someone refusing to accept 28 seconds, not by the investigation — it took one line of config and five live requests to go from 27.9s to 5.4s.
+
+- **Instrumentation pays off on a horizon shorter than you expect.** The per-call log line was added to stop *future* incidents needing forensic reconstruction. It named the root cause of a different and larger problem within the hour, on its first real use, from a field (`thoughts=634`) nobody had gone looking for. It was justified as insurance and paid as a diagnosis.
+
+The uncomfortable part is that the timeout fix was *good work*. It was correctly diagnosed, properly measured, honestly reported and genuinely necessary. It was also, on its own, the wrong altitude — and no amount of rigour inside the wrong frame promotes you out of it. That only happened because the result was held up against what it *should* be rather than against what it *had been*.

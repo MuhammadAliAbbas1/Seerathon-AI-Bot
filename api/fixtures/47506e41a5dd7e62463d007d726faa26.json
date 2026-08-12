@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v1",
+    "schemaVersion": "answer-v1",
+    "language": "ur",
+    "question": "Huzoor ka akhlaq kaisa tha?",
+    "recordedAt": "2026-08-12T17:48:23.484Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "حضور اکرم ﷺ کا اخلاق بہت اعلیٰ تھا، آپ ﷺ نے کبھی اپنی ذات کے لیے کسی سے بدلہ نہیں لیا، بلکہ زیادتی کرنے والوں کو بھی معاف فرما دیتے تھے۔ آپ ﷺ اپنی امت پر بہت شفیق اور مہربان تھے، یہاں تک کہ امت پر مشقت کے خوف سے بعض افعال کو ترک فرما دیتے تھے۔ آپ ﷺ نے کافروں کے لیے بھی بددعا نہیں کی بلکہ ان کی ہدایت کی دعا فرمائی۔ عورتوں اور بچوں پر بھی آپ ﷺ کی شفقت بے مثال تھی، آپ ﷺ ان کے حقوق کا خیال رکھتے اور ان سے محبت سے پیش آتے تھے۔",
+      "citations": [
+        "672b3e8ed458540020750eab",
+        "672c82436fa080001f6a18fc",
+        "672c8b7d1c9a6f001f8eea5c",
+        "672c93c01c9a6f001f8eec39",
+        "672f27ab8b25ed0020c2f3df"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"حضور اکرم ﷺ کا اخلاق بہت اعلیٰ تھا، آپ ﷺ نے کبھی اپنی ذات کے لیے کسی سے بدلہ نہیں لیا، بلکہ زیادتی کرنے والوں کو بھی معاف فرما دیتے تھے۔ آپ ﷺ اپنی امت پر بہت شفیق اور مہربان تھے، یہاں تک کہ امت پر مشقت کے خوف سے بعض افعال کو ترک فرما دیتے تھے۔ آپ ﷺ نے کافروں کے لیے بھی بددعا نہیں کی بلکہ ان کی ہدایت کی دعا فرمائی۔ عورتوں اور بچوں پر بھی آپ ﷺ کی شفقت بے مثال تھی، آپ ﷺ ان کے حقوق کا خیال رکھتے اور ان سے محبت سے پیش آتے تھے۔\",\n  \"citations\": [\n    \"672b3e8ed458540020750eab\",\n    \"672c82436fa080001f6a18fc\",\n    \"672c8b7d1c9a6f001f8eea5c\",\n    \"672c93c01c9a6f001f8eec39\",\n    \"672f27ab8b25ed0020c2f3df\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 4033,
+        "candidatesTokenCount": 277,
+        "totalTokenCount": 4310,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 4033
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "47F8apqyK9WIxN8P16vR0Q8"
+    }
+  }
+}

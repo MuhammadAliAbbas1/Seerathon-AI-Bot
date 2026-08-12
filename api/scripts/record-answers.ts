@@ -65,15 +65,33 @@ const routerCached = (q: string) => {
   return !!readFixture(fixtureKey({ op: "classify", provider: "gemini", model: GEMINI_CLASSIFY_MODEL, question: q, language: lang }));
 };
 
+/**
+ * Optional subset:  node api/scripts/record-answers.ts H5,R1,H6
+ *
+ * The deferred cases are re-run alone rather than replaying the whole batch —
+ * replaying would spend nothing on the cached cases but would still walk the
+ * paced loop, and more importantly it makes "what did this run actually cost?"
+ * ambiguous. One run, one intent.
+ */
+function selection(): Case[] {
+  const only = (process.argv[2] ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  return only.length ? CASES.filter((c) => only.includes(c.id)) : CASES;
+}
+
 console.log(`corpus ${loadCorpus().corpusVersion}\n`);
 console.log("router fixture already recorded?");
-for (const c of CASES) console.log(`  ${c.id.padEnd(4)} ${routerCached(c.q) ? "cached (no router request)" : "NEW router request needed"}`);
+for (const c of selection()) console.log(`  ${c.id.padEnd(4)} ${routerCached(c.q) ? "cached (no router request)" : "NEW router request needed"}`);
 console.log();
 
 const results: any[] = [];
 
+// Run a subset:  node api/scripts/record-answers.ts H5,R1,H6,F8,F9,F6b
+// The deferred cases are re-run alone rather than replaying the whole batch,
+// which would spend quota re-recording nothing.
+const SELECTED = selection();
+
 let first = true;
-for (const c of CASES) {
+for (const c of SELECTED) {
   // Pace on the ANSWER model, the tighter of the two limits.
   if (!first) await pace("gemini-2.5-flash", c.id);
   first = false;
