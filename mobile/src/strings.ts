@@ -37,6 +37,13 @@ export const UI: Record<string, L> = {
     ur: "منتظمین کی شائع کردہ عبارت بعینہٖ نقل کی گئی ہے۔",
   },
   offline: { en: "Cannot reach the service.", ur: "سروس تک رسائی نہیں ہو سکی۔" },
+  /**
+   * Labels a quota or outage bubble. Its whole job is to stop a judge reading
+   * a system failure as the bot having DECLINED — the two are different
+   * claims, and only one of them is a considered position (§5.6).
+   * Calm on purpose: no "error", no "failed", no alarm.
+   */
+  systemNotice: { en: "Temporary service issue", ur: "عارضی تکنیکی مسئلہ" },
 };
 
 export const t = (key: keyof typeof UI, lang: Language) => UI[key][lang];

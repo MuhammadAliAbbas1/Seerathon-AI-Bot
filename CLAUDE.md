@@ -716,16 +716,30 @@ Do not build these. Do not suggest them. If I ask for one, remind me it's on thi
 
 ## 10. Current status
 
-- [x] **Phase 0 — Recon. COMPLETE.** API probed, real response shapes documented in `recon/`. Findings folded into §4, §5.3, §5.4, §7.1 and §11.
-- [ ] **Phase 1 — Corpus bake + routing index.** ← we are here. Three deliverables: (a) `corpus:sync` writes the full 781 KB `corpus.json` — both languages, hikayat included; (b) build the ~9.7k-token bilingual routing index off it; (c) **throwaway EAS hello-world APK build to de-risk the pipeline.** **Also: throwaway EAS hello-world APK build to de-risk the pipeline.**
-- [ ] Phase 2 — Guardrail router (3-way classification)
-- [ ] Phase 3 — Answer path + citation validation
-- [x] **Phase 3.5 — Deploy backend. COMPLETE 2026-08-12.** Live at **`https://seerathon-api.vercel.app`**. Details in §5.7. **All four rubric behaviours verified through the real deployment**, plus the quota path: `ruling_seeking` (en + ur, zero quota — the ratchet short-circuits), `out_of_corpus`, `in_corpus` (5 valid citations), error paths (400/404), the rate limiter (localized 429), and a genuine `quota_exhausted` 503. APK rebuilt against this URL.
-- [ ] Phase 4 — Chat UI (source cards, persistent disclaimer)
-- [ ] Phase 5 — Urdu support
-- [ ] Phase 6 — Adversarial hardening
-- [ ] Phase 7 — Deploy + demo rehearsal
-- [ ] Stretch — WhatsApp surface
+⚠️ **This checklist is what carries context across a session reset, so it is load-bearing rather than decorative. It went three phases stale once** — it still read *"Phase 1 ← we are here"* while 1, 2, 3 and 3.5 were all finished — **and a stale roadmap is worse than none, because it is trusted.** Update it in the same commit as the work, never afterwards.
+
+Every row states **what "complete" means**, so partial progress cannot quietly read as done.
+
+| Phase | State | "Complete" means | What actually remains |
+|---|---|---|---|
+| **0 — Recon** | ✅ | Real response shapes documented in `recon/`, findings folded into the design | — |
+| **1 — Corpus bake + index** | ✅ | `corpus.json` baked from the live API, routing index built off it, EAS pipeline de-risked | — (154 entries, 35,683-char index) |
+| **2 — Guardrail router** | ✅ | 3-way classification, keyword ratchet, precedence, fail-closed — verified live in **both** languages | — |
+| **3 — Answer path + §5.3** | ✅ | All three citation checks enforced in code, so a hallucinated or hollow citation cannot reach the screen — verified live | — |
+| **3.5 — Deploy backend** | ✅ | Stable public URL, all four rubric behaviours verified **through the deployment** | — (`seerathon-api.vercel.app`, §5.7) |
+| **4 — Chat UI** | 🟡 **in progress** | Source cards, persistent disclaimer, and the whole surface **usable on a real device by someone who has never seen it** | Keyboard covered the composer (Android edge-to-edge); no safe-area handling; touch targets under 48dp; no route back to the example chips; five sources stack into a wall |
+| **5 — Urdu** | 🟡 **substantially done** | Bilingual end to end — detection, selection, answers, citations **and the whole shell** — with RTL correct on hardware | Native-speaker register review (owner: **the human**, not the agent). RTL of the new UI surfaces unverified on device |
+| **6 — Adversarial hardening** | 🟡 **partial** | `tests/adversarial.md` run **as one suite** before every router/prompt commit, every 🔴 case genuinely tested | 49 cases documented, offline groups C/D pass, live groups verified piecemeal. Never run end to end as a single suite |
+| **7 — Deploy + demo rehearsal** | 🟡 **half** | Deployed **and rehearsed** — the demo run start to finish on the real APK against the real backend | Deploy done. **Rehearsal never done.** `demo-cache.json` (§5.6) not built |
+| **Stretch — WhatsApp** | ⬜ | A second surface on the same core | Not started. Strictly a bonus, never at the cost of the primary surface (§6) |
+
+**Priority of what remains, highest first:**
+
+1. **Phase 4** — the APK *is* the submission artifact; judges install and run it.
+2. **Phase 7 rehearsal** — never done, and it is where unknown-unknowns surface.
+3. **`demo-cache.json`** — quota insurance for judging day (§5.6). No longer a latency crutch (§5.9).
+4. **Urdu register review** — blocked on human judgement, not on code.
+5. **Phase 6 as a suite** — largely covered piecemeal; the gap is running it *as* a suite.
 
 ---
 

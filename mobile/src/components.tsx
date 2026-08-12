@@ -10,28 +10,67 @@ export function Header({
   lang,
   onToggleLang,
   onAbout,
+  onNewChat,
+  showNewChat,
   title,
 }: {
   lang: Language;
   onToggleLang: () => void;
   onAbout: () => void;
+  onNewChat: () => void;
+  showNewChat: boolean;
   title: string;
 }) {
   return (
     <View style={s.header}>
-      <Text style={[type.title, isUr(lang) && { fontSize: 24 }]}>{title}</Text>
+      {/* Shrinks and truncates rather than pushing the controls off screen —
+          three controls plus a title is tight on a 360dp phone. */}
+      <Text style={[type.title, isUr(lang) && { fontSize: 24 }, { flexShrink: 1 }]} numberOfLines={1}>
+        {title}
+      </Text>
       <View style={s.headerRight}>
-        {/* Copied from the reference's own UR/EN pill (§12.1) so language
-            switching reads as native to that app rather than bolted on. */}
-        <Pressable onPress={onToggleLang} style={s.pill} accessibilityLabel="Switch language">
-          <View style={[s.pillHalf, lang === "ur" && s.pillHalfOn]}>
-            <Text style={[s.pillText, lang === "ur" && s.pillTextOn]}>UR</Text>
+        {/* The reference's toggle is a SWITCH — `UR ( ● ) EN` — not the
+            segmented pill §12.1 described from a smaller screenshot. Matched
+            to the real control: labels flanking a track, the knob sliding to
+            the active side, active label in primary green.
+            ⚠️ Which side the reference's knob sits on could not be resolved
+            from the screenshot, so this uses the unambiguous convention —
+            knob toward the language that is ON. */}
+        <Pressable
+          onPress={onToggleLang}
+          style={s.toggle}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: lang === "ur" }}
+          accessibilityLabel="Switch language between Urdu and English"
+        >
+          <Text style={[s.toggleLabel, lang === "ur" && s.toggleLabelOn]}>UR</Text>
+          <View style={s.track}>
+            <View style={[s.knob, lang === "ur" ? s.knobUr : s.knobEn]} />
           </View>
-          <View style={[s.pillHalf, lang === "en" && s.pillHalfOn]}>
-            <Text style={[s.pillText, lang === "en" && s.pillTextOn]}>EN</Text>
-          </View>
+          <Text style={[s.toggleLabel, lang === "en" && s.toggleLabelOn]}>EN</Text>
         </Pressable>
-        <Pressable onPress={onAbout} style={s.iconBtn} accessibilityLabel="About and corpus rules">
+
+        {showNewChat && (
+          <Pressable
+            onPress={onNewChat}
+            style={({ pressed }) => [s.iconBtn, pressed && s.iconBtnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="New conversation"
+          >
+            <Text style={s.iconGlyph}>+</Text>
+          </Pressable>
+        )}
+
+        {/* The ONLY route to the verbatim /meta disclaimer the organizers
+            wrote and will look for (§4), so it is a rubric surface, not a
+            footer link. Sized to the reference's own ~48px rounded-square
+            header buttons. */}
+        <Pressable
+          onPress={onAbout}
+          style={({ pressed }) => [s.iconBtn, pressed && s.iconBtnPressed]}
+          accessibilityRole="button"
+          accessibilityLabel="About and corpus rules"
+        >
           <Text style={s.iconGlyph}>i</Text>
         </Pressable>
       </View>
@@ -71,7 +110,21 @@ export function BotBubble({
 }) {
   const [open, setOpen] = useState(false);
   const ur = isUr(lang);
-  const marked = mode === "ruling_seeking" || mode === "quota" || mode === "error";
+
+  // ── A refusal and an outage must not look the same ─────────────────────
+  //
+  // These three modes all used to share one gold rule. But the gold rule
+  // means "this is a considered position, not a failure" — and on `quota` or
+  // `error` that is FALSE. The bot did not decline; our call broke. Rendering
+  // an outage as a considered refusal is §5.6's failure-path-may-not-lie rule
+  // violated one layer up, on the surface a judge actually reads.
+  //
+  // So: gold rule for a genuine refusal, and a tinted, dashed, explicitly
+  // labelled treatment for a system failure. Still no red and no warning
+  // iconography (§12.2) — quota is something a judge may genuinely hit on
+  // stage, and it must read as calm, just not as a decision we made.
+  const isRefusal = mode === "ruling_seeking";
+  const isSystem = mode === "quota" || mode === "error";
 
   return (
     <View style={[s.row, ur ? { justifyContent: "flex-end" } : { justifyContent: "flex-start" }]}>
@@ -81,10 +134,13 @@ export function BotBubble({
             s.bubble,
             s.botBubble,
             ur ? s.botBubbleUr : s.botBubbleEn,
-            // A gold rule marks "this is a considered position, not a failure".
-            marked && (ur ? s.markedUr : s.markedEn),
+            isRefusal && (ur ? s.markedUr : s.markedEn),
+            isSystem && s.systemBubble,
           ]}
         >
+          {isSystem && (
+            <Text style={[metaStyle(lang), s.systemLabel]}>{t("systemNotice", lang)}</Text>
+          )}
           <Text style={bodyStyle(lang)}>{text}</Text>
         </View>
 
@@ -202,37 +258,65 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: space.xl,
-    paddingTop: 56,
-    paddingBottom: space.md,
+    // Was paddingHorizontal: space.xl and paddingTop: 56 — the 56 was a
+    // hardcoded status-bar guess. Top inset now comes from the safe area on
+    // the root; the horizontal padding dropped to make room for three
+    // controls beside the title.
+    paddingHorizontal: space.lg,
+    paddingTop: space.sm,
+    paddingBottom: space.sm,
     backgroundColor: color.bg,
     borderBottomWidth: 1,
     borderBottomColor: color.divider,
+    gap: space.sm,
   },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: space.md },
-  pill: {
+  headerRight: { flexDirection: "row", alignItems: "center", gap: space.sm },
+
+  // ── UR/EN switch ──────────────────────────────────────────────────────
+  // 48dp tall including padding. The old segmented pill was ~24dp, which is
+  // half Android's minimum and was the hardest control on screen to hit —
+  // on a §7.1 rubric surface.
+  toggle: {
     flexDirection: "row",
-    backgroundColor: color.surface,
+    alignItems: "center",
+    gap: 6,
+    minHeight: 48,
+    paddingHorizontal: 2,
+  },
+  toggleLabel: { fontSize: 12, fontWeight: "700", color: color.textSoft },
+  toggleLabelOn: { color: color.primary },
+  track: {
+    width: 40,
+    height: 24,
     borderRadius: 999,
+    backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.divider,
-    padding: 2,
+    justifyContent: "center",
   },
-  pillHalf: { paddingHorizontal: space.md, paddingVertical: 5, borderRadius: 999 },
-  pillHalfOn: { backgroundColor: color.primary },
-  pillText: { fontSize: 12, fontWeight: "700", color: color.textSoft },
-  pillTextOn: { color: color.onPrimary },
-  iconBtn: {
-    width: 34,
-    height: 34,
+  knob: {
+    position: "absolute",
+    width: 18,
+    height: 18,
     borderRadius: 999,
+    backgroundColor: color.primary,
+  },
+  knobUr: { left: 2 },
+  knobEn: { right: 2 },
+
+  iconBtn: {
+    // Reference header buttons are ~48px rounded SQUARES, not small circles.
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.divider,
     alignItems: "center",
     justifyContent: "center",
   },
-  iconGlyph: { fontSize: 15, fontWeight: "700", color: color.primary },
+  iconBtnPressed: { backgroundColor: color.band },
+  iconGlyph: { fontSize: 19, fontWeight: "700", color: color.primary },
 
   row: { flexDirection: "row", paddingHorizontal: space.lg, marginTop: space.md },
   bubble: { paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.bubble },
@@ -246,6 +330,22 @@ const s = StyleSheet.create({
   botBubbleUr: { borderBottomRightRadius: radius.tight },
   markedEn: { borderLeftWidth: 3, borderLeftColor: color.gold },
   markedUr: { borderRightWidth: 3, borderRightColor: color.gold },
+
+  /**
+   * System failure: tinted band ground plus a dashed hairline — visibly not a
+   * white "considered answer" bubble and visibly not a gold-ruled refusal,
+   * without a single alarming pixel.
+   *
+   * The band background carries the distinction on its own. `borderStyle:
+   * dashed` is known to fall back to solid alongside `borderRadius` on some
+   * Android versions, so it is the garnish here, never the signal.
+   */
+  systemBubble: {
+    backgroundColor: color.band,
+    borderStyle: "dashed",
+    borderColor: color.divider,
+  },
+  systemLabel: { marginBottom: space.xs, fontWeight: "600" },
 
   chip: {
     alignSelf: "flex-start",

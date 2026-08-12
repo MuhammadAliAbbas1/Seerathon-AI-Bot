@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { ask } from "./src/api";
 import type { AskResponse, Citation, Language, Mode } from "./src/api";
@@ -41,7 +42,49 @@ const BOOT_DISCLAIMER: Record<Language, string> = {
   ur: "جوابات صرف منظور شدہ سیرت و شمائل کے ذخیرے سے آتے ہیں، اور ہر جواب اپنا حوالہ ساتھ دکھاتا ہے۔ یہ شرعی احکام کا ذریعہ نہیں۔",
 };
 
+/**
+ * Keyboard height, so the composer can ride above it.
+ *
+ * ⚠️ `KeyboardAvoidingView` was here and did NOTHING on Android: its `behavior`
+ * was `undefined` on that platform, so it fell through to the native
+ * `adjustResize`. Expo SDK 52+ enables **edge-to-edge** by default, and under
+ * edge-to-edge the window no longer resizes for the keyboard — so there was no
+ * fallback and the keyboard simply covered the input. A judge hits that in the
+ * first ten seconds.
+ *
+ * Handled manually instead of with a dependency: one mechanism on both
+ * platforms is easier to reason about than a component that silently does
+ * nothing on one of them.
+ */
+function useKeyboardHeight(): number {
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    // iOS fires Will* early enough to move with the keyboard; Android only
+    // ever fires Did*.
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const show = Keyboard.addListener(showEvent, (e) => setHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener(hideEvent, () => setHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return height;
+}
+
 export default function App() {
+  // Provider must sit above anything calling useSafeAreaInsets().
+  return (
+    <SafeAreaProvider>
+      <Root />
+    </SafeAreaProvider>
+  );
+}
+
+function Root() {
+  const insets = useSafeAreaInsets();
+  const keyboard = useKeyboardHeight();
   const [lang, setLang] = useState<Language>("en");
   const [screen, setScreen] = useState<"chat" | "about">("chat");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -55,6 +98,23 @@ export default function App() {
     return <AboutScreen lang={lang} onBack={() => setScreen("chat")} />;
   }
 
+  /**
+   * Back to the landing screen. The example chips are the demo affordance —
+   * they name one in-corpus, one out-of-corpus and one ruling question, so a
+   * judge sees the guardrails before inventing a question. Without a route
+   * back, the first message retired them permanently.
+   *
+   * §8 excludes conversation history, so this is a reset, not a "conversation
+   * list": there is nothing to go back TO except a clean slate.
+   */
+  const newChat = () => {
+    Keyboard.dismiss();
+    setTurns([]);
+    setInput("");
+    setBusy(false);
+    setDisclaimer(BOOT_DISCLAIMER[lang]);
+  };
+
   const submit = async (raw?: string) => {
     const question = (raw ?? input).trim();
     if (!question || busy) return;
@@ -62,7 +122,6 @@ export default function App() {
     setBusy(true);
 
     setTurns((prev) => [...prev, { id: nextId.current++, role: "user", text: question, lang }]);
-    requestAnimationFrame(() => scroller.current?.scrollToEnd({ animated: true }));
 
     const res: AskResponse = await ask(question, lang);
 
@@ -105,11 +164,10 @@ export default function App() {
       if (res.language !== lang) setLang(res.language);
     }
     setBusy(false);
-    requestAnimationFrame(() => scroller.current?.scrollToEnd({ animated: true }));
   };
 
   return (
-    <View style={s.root}>
+    <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
       <Header
         lang={lang}
@@ -120,72 +178,93 @@ export default function App() {
           setDisclaimer(BOOT_DISCLAIMER[next]);
         }}
         onAbout={() => setScreen("about")}
+        onNewChat={newChat}
+        // Meaningless on the landing screen, and omitting it there keeps the
+        // header uncrowded exactly when there is least to gain from it.
+        showNewChat={turns.length > 0}
       />
 
-      <KeyboardAvoidingView
+      <ScrollView
+        ref={scroller}
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={0}
+        contentContainerStyle={{ paddingBottom: space.xl }}
+        keyboardShouldPersistTaps="handled"
+        // Scrolls after LAYOUT rather than after state, which a
+        // requestAnimationFrame does not guarantee — a long answer used to
+        // under-scroll and leave its own first line off screen.
+        onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: true })}
       >
-        <ScrollView
-          ref={scroller}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: space.xl }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {turns.length === 0 ? (
-            <EmptyState lang={lang} onPick={(q) => submit(q)} />
-          ) : (
-            turns.map((turn) =>
-              turn.role === "user" ? (
-                <UserBubble key={turn.id} text={turn.text} lang={turn.lang} />
-              ) : (
-                <BotBubble
-                  key={turn.id}
-                  text={turn.text}
-                  lang={turn.lang}
-                  mode={turn.mode ?? "in_corpus"}
-                  citations={turn.citations}
-                />
-              )
+        {turns.length === 0 ? (
+          <EmptyState lang={lang} onPick={(q) => submit(q)} />
+        ) : (
+          turns.map((turn) =>
+            turn.role === "user" ? (
+              <UserBubble key={turn.id} text={turn.text} lang={turn.lang} />
+            ) : (
+              <BotBubble
+                key={turn.id}
+                text={turn.text}
+                lang={turn.lang}
+                mode={turn.mode ?? "in_corpus"}
+                citations={turn.citations}
+              />
             )
-          )}
-          {busy && (
-            <View style={s.busy}>
-              <ActivityIndicator color={color.primary} />
-              <Text style={[type.meta, { marginLeft: space.sm }]}>{t("thinking", lang)}</Text>
-            </View>
-          )}
-        </ScrollView>
+          )
+        )}
+        {busy && (
+          <View style={[s.busy, isUr(lang) && { flexDirection: "row-reverse" }]}>
+            <ActivityIndicator color={color.primary} />
+            <Text style={[type.meta, { marginHorizontal: space.sm }]}>{t("thinking", lang)}</Text>
+          </View>
+        )}
+      </ScrollView>
 
-        {/* Pinned, non-dismissible, and deliberately the quietest thing on
-            screen. Off-style for the reference app, required by the rubric
-            (§12.3) — it does not collapse and it has no close affordance. */}
-        <DisclaimerBar text={disclaimer} lang={lang} />
+      {/* Pinned, non-dismissible, and deliberately the quietest thing on
+          screen. Off-style for the reference app, required by the rubric
+          (§12.3) — it does not collapse and it has no close affordance. It
+          stays visible with the keyboard open, which is why the keyboard is
+          handled by shrinking the ROOT rather than by hiding the composer. */}
+      <DisclaimerBar text={disclaimer} lang={lang} />
 
-        <View style={s.composer}>
-          <TextInput
-            style={[
-              s.input,
-              isUr(lang) && { textAlign: "right", writingDirection: "rtl", fontSize: 17, lineHeight: 26 },
-            ]}
-            value={input}
-            onChangeText={setInput}
-            placeholder={t("placeholder", lang)}
-            placeholderTextColor={color.textSoft}
-            multiline
-            onSubmitEditing={() => submit()}
-            editable={!busy}
-          />
-          <Pressable
-            onPress={() => submit()}
-            disabled={busy || !input.trim()}
-            style={[s.send, (busy || !input.trim()) && { opacity: 0.4 }]}
-          >
-            <Text style={s.sendText}>{t("send", lang)}</Text>
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
+      <View
+        style={[
+          s.composer,
+          // Sit above the gesture bar when the keyboard is closed; the
+          // keyboard covers that area itself when open.
+          { paddingBottom: keyboard > 0 ? space.md : insets.bottom + space.md },
+        ]}
+      >
+        <TextInput
+          style={[
+            s.input,
+            isUr(lang) && { textAlign: "right", writingDirection: "rtl", fontSize: 17, lineHeight: 26 },
+          ]}
+          value={input}
+          onChangeText={setInput}
+          placeholder={t("placeholder", lang)}
+          placeholderTextColor={color.textSoft}
+          multiline
+          // Deliberately NOT disabled while busy: a judge should be able to
+          // compose a follow-up during the wait, as they can in every chat app
+          // they have used. Only sending is blocked.
+        />
+        <Pressable
+          onPress={() => submit()}
+          disabled={busy || !input.trim()}
+          accessibilityRole="button"
+          accessibilityLabel={t("send", lang)}
+          style={({ pressed }) => [
+            s.send,
+            (busy || !input.trim()) && { opacity: 0.4 },
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <Text style={s.sendText}>{t("send", lang)}</Text>
+        </Pressable>
+      </View>
+
+      {/* Shrinks the column so the composer rides above the keyboard. */}
+      {keyboard > 0 && <View style={{ height: keyboard }} />}
     </View>
   );
 }
@@ -197,8 +276,8 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     gap: space.sm,
-    padding: space.md,
-    paddingBottom: space.xl,
+    paddingHorizontal: space.md,
+    paddingTop: space.md,
     backgroundColor: color.bg,
     borderTopWidth: 1,
     borderTopColor: color.divider,
@@ -214,6 +293,7 @@ const s = StyleSheet.create({
     paddingBottom: 11,
     fontSize: 15,
     lineHeight: 21,
+    minHeight: 48,
     maxHeight: 120,
     color: color.text,
   },
@@ -221,7 +301,9 @@ const s = StyleSheet.create({
     backgroundColor: color.primary,
     borderRadius: 12,
     paddingHorizontal: space.xl,
-    paddingVertical: 13,
+    // 48dp minimum touch target (Android guideline).
+    minHeight: 48,
+    justifyContent: "center",
   },
   sendText: { color: color.onPrimary, fontWeight: "700", fontSize: 14 },
 });
