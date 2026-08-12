@@ -43,9 +43,8 @@ const CASES: Case[] = [
 /** Word n-gram overlap — the test for "substantially reproduces". */
 function longestSharedRun(a: string, b: string): number {
   const norm = (s: string) => s.toLowerCase().normalize("NFC").split(/[^\p{L}\p{N}]+/u).filter(Boolean);
-  const A = norm(a), B = new Set<string>();
+  const A = norm(a);
   const bw = norm(b);
-  for (let n = 0; n < bw.length; n++) B.add(bw[n]);
   // longest run of consecutive answer words that all appear in the source,
   // in order, as a contiguous source substring
   const bJoined = " " + bw.join(" ") + " ";
@@ -83,7 +82,7 @@ for (const c of CASES) {
   try {
     r = await ask(c.q, { provider });
   } catch (e) {
-    err = (e as Error).message.split("\n")[0];
+    err = (e as Error).message.split("\n")[0] ?? "unknown error";
     r = null;
   }
   const ms = Date.now() - t0;
@@ -97,15 +96,16 @@ for (const c of CASES) {
     row.reason = r.reason;
     // Re-verify §5.3 independently of the pipeline: prove each id passes all
     // three checks, and that the card text is byte-identical to the cache.
+    const lang = r.language as "en" | "ur";
     row.checks = (r.citations || []).map((cit: any) => {
       const e = getEntry(cit.id);
       return {
         id: cit.id,
         check1_exists: !!e,
         check2_hasBody: !!e && (e.hasBody.en || e.hasBody.ur),
-        check3_bodyInAnswerLang: !!e && e.hasBody[r.language] === true,
-        titleFromCache: !!e && cit.title === entryTitle(e, r.language),
-        textFromCache: !!e && cit.text === entryTextForCitation(e, r.language),
+        check3_bodyInAnswerLang: !!e && e.hasBody[lang] === true,
+        titleFromCache: !!e && cit.title === entryTitle(e, lang),
+        textFromCache: !!e && cit.text === entryTextForCitation(e, lang),
       };
     });
     row.maxSharedRun = (r.citations || []).reduce(

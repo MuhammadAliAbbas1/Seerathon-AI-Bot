@@ -1,0 +1,22 @@
+{
+  "//": "Type-CHECKING only. Node 24 runs these files by stripping types, which never checks them — so without this, every annotation in api/src is a comment that looks like a guarantee.",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+        "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": ["api/**/*.ts", "scripts/**/*.mjs"],
+  "exclude": ["node_modules", "mobile"]
+}

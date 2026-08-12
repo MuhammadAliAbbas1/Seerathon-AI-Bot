@@ -50,11 +50,13 @@ describe("answer path — happy", () => {
     assert.equal(r.mode, "in_corpus");
     assert.equal(r.answer, "He was gentle and forgiving.");
     assert.equal(r.citations.length, 1);
+    const cit = r.citations[0];
+    assert.ok(cit, "expected exactly one citation");
     // The model supplied only an id; every other field came from the corpus.
-    assert.equal(r.citations[0].id, ID_BOTH);
-    assert.equal(r.citations[0].title, `EN ${ID_BOTH}`);
-    assert.equal(r.citations[0].type, "shamail");
-    assert.ok(r.citations[0].text.length > 0);
+    assert.equal(cit.id, ID_BOTH);
+    assert.equal(cit.title, `EN ${ID_BOTH}`);
+    assert.equal(cit.type, "shamail");
+    assert.ok(cit.text.length > 0);
   });
 });
 

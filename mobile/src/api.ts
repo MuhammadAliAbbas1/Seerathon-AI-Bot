@@ -4,15 +4,10 @@
  * The ONLY config the app ships is the backend URL. No API key ever enters the
  * bundle — an APK is trivially extractable (§5.4).
  */
-export type Mode = "in_corpus" | "out_of_corpus" | "ruling_seeking";
-export type Language = "en" | "ur";
-
-export interface Citation {
-  id: string;
-  type: "shamail" | "timeline";
-  title: string;
-  text: string;
-}
+// Generated from api/src/contract.ts by npm run contract:sync.
+// Redeclaring these here is what let Mode drift silently before.
+export type { Citation, Language, Mode } from "./contract";
+import type { Citation, Language, Mode } from "./contract";
 
 export interface AskOk {
   kind: "ok";

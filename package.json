@@ -9,6 +9,14 @@
     "corpus:sync": "node scripts/corpus-sync.mjs",
     "test": "node --test api/tests/*.test.ts",
     "dev:api": "node api/scripts/dev-server.ts",
-    "dev:api:live": "node api/scripts/dev-server.ts --live"
+    "dev:api:live": "node api/scripts/dev-server.ts --live",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run contract:check && npm run typecheck && npm test",
+    "contract:sync": "node scripts/contract-sync.mjs",
+    "contract:check": "node scripts/contract-sync.mjs --check"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2"
   }
 }

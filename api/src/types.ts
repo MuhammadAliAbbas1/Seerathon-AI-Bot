@@ -1,8 +1,11 @@
 // Shared vocabulary. Kept deliberately small — see CLAUDE.md §5.6 on not
 // building a generic LLM abstraction.
 
-/** The three-way classification. Nothing else is ever a valid mode. */
-export type Mode = "in_corpus" | "out_of_corpus" | "ruling_seeking";
+// Mode and Language are defined ONCE, in contract.ts, because they cross the
+// wire and the app must agree with us. Re-exported so existing imports of
+// ./types.ts keep working.
+export type { Citation, Language, Mode } from "./contract.ts";
+import type { Language, Mode } from "./contract.ts";
 
 export const MODES = ["in_corpus", "out_of_corpus", "ruling_seeking"] as const;
 
@@ -16,9 +19,6 @@ export const MODES = ["in_corpus", "out_of_corpus", "ruling_seeking"] as const;
 export function isMode(v: unknown): v is Mode {
   return typeof v === "string" && (MODES as readonly string[]).includes(v);
 }
-
-/** A language we can actually answer and cite in — the corpus has two blocks. */
-export type Language = "en" | "ur";
 
 /**
  * What the user appears to have typed. Roman-Urdu is a distinct *input* form

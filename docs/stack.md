@@ -124,21 +124,29 @@ So: the strongest case for Python is that it is the conventional choice for AI w
 
 ## 5. Where our choice is genuinely worse
 
-Four things a knowledgeable judge could fairly push on. The first two are the ones I would push on.
+Four things a knowledgeable judge could fairly push on. The first two were the ones I would have pushed on — **both are now closed**; the record of what they were is kept below, because a document that quietly deletes its own criticisms is not worth reading.
 
-### 5.1 The API's TypeScript has never been type-checked
+### 5.1 The API's TypeScript was never type-checked — **CLOSED 2026-08-12**
 
-Node 24 runs `.ts` by **stripping** types, not checking them. There is no `typescript` dependency at the repo root and no `tsc` script. So every type annotation in `api/src/` is a comment that looks like a guarantee.
+**The hole.** Node 24 runs `.ts` by **stripping** types, not checking them. There was no `typescript` dependency at the repo root and no `tsc` script, so every annotation in `api/src/` — including the router's, the citation validator's, and the provider union's — was a comment that looked like a guarantee. The mobile app was checked; the safety-critical half was not.
 
-The mobile app *is* checked — `mobile/` has TypeScript installed and `npx tsc --noEmit` passes. The backend, the safety-critical half, is not.
+**Closed.** `typescript` and `@types/node` added as devDependencies (approved), plus a `tsconfig.json` matching how Node actually runs the code (`allowImportingTsExtensions`, `noEmit`) and a `typecheck` script.
 
-This is a real hole and I did not notice it until writing this document. Mitigation is cheap — add `typescript` as a single devDependency and a `typecheck` script — but it is a dependency, and per §9 that is a decision to raise rather than take. **Raising it now: I recommend we add it.** The 118 tests catch behaviour, but they cannot catch a field renamed in one place and not another.
+**What the first-ever run found: 7 errors — and none of them in `api/src/`.** All seven were in `api/scripts/` and `api/tests/`, and all were `noUncheckedIndexedAccess` catching array indexing that TypeScript could not prove was populated (`bw[n]`, `r.citations[0]`, `.split("\n")[0]`).
 
-### 5.2 The contract type is duplicated across the boundary
+That result is worth sitting with rather than celebrating. The good reading is that the production path is genuinely well-typed and 118 behavioural tests were doing real work. The honest reading is that **it proves nothing about how long the hole could have persisted** — the check found nothing in `api/src/` *this time*, on a codebase written in a few days by one author who happened to be careful. It would not have stayed that way, and the failure it prevents is silent: a field renamed on one side of a boundary, no test touching that exact path, and a runtime `undefined` on stage.
 
-`Mode` is declared in `api/src/types.ts` and again in `mobile/src/api.ts`. This is exactly the drift risk I named when recommending against a monorepo in Decision 3, and dismissed as "forty lines you will read every time."
+`npm run check` now runs contract-check, typecheck, and tests together.
 
-It has not bitten us. It is still a hole, and the mitigation I offered at the time — a single file copied by a script — was never built. If the server adds a mode or renames a field, nothing fails; the app silently mishandles it at runtime.
+### 5.2 The contract type was duplicated across the boundary — **CLOSED 2026-08-12**
+
+**The hole.** `Mode` was declared in `api/src/types.ts` and again in `mobile/src/api.ts`. This was exactly the drift risk I named when recommending against a monorepo in Decision 3 — and then dismissed as "forty lines you will read every time." The mitigation I offered at the time, a single file copied by a script, was **not built for three phases** while I twice cited it as the reason the risk was acceptable.
+
+**Closed.** `api/src/contract.ts` is now the single source of truth for the wire shape — `Mode`, `Language`, `Citation`, request and response bodies, error codes. `npm run contract:sync` copies it to `mobile/src/contract.ts` behind a generated-file banner; `npm run contract:check` fails if they have drifted and is the first step of `npm run check`. Both sides now import those types rather than redeclaring them.
+
+Verified by deliberately adding a bogus fourth mode to the app copy and confirming `contract:check` failed, then restoring it — the guard was tested, not assumed.
+
+**The general lesson, which outlives this specific fix:** when a decision is accepted *because* a mitigation is promised, the mitigation is part of the decision and not a follow-up. This one was cited as the reason no-monorepo was safe, and then not built until it was pointed out.
 
 ### 5.3 The dev server is not the production server
 
@@ -172,6 +180,15 @@ The decision was reasoned rather than defaulted, but it was reasoned against *th
 
 ## The short version, for a judge
 
-We are running **Node 24 with zero dependencies**. The backend is a pure function that takes a question and returns structured JSON; the HTTP layer around it is about a hundred lines and is deliberately swappable. We chose TypeScript over Python because our backend does **no machine learning at all** — it is an HTTP client and a hash-map lookup — and because the client is React Native, so one language covers both halves.
+We are running **Node 24 with two devDependencies and zero runtime dependencies** — TypeScript and its Node types, both for checking only, neither shipped. The backend is a pure function that takes a question and returns structured JSON; the HTTP layer around it is about a hundred lines and is deliberately swappable. We chose TypeScript over Python because our backend does **no machine learning at all** — it is an HTTP client and a hash-map lookup — and because the client is React Native, so one language covers both halves.
 
-The honest weaknesses: the backend's types are stripped rather than checked, the request contract is written twice, and nothing has been deployed yet, so the production HTTP layer is still hypothetical.
+The honest weakness that remains: **nothing has been deployed yet**, so the production HTTP layer is still hypothetical and everything verified end to end was verified against a dev server that will not exist in production. That is Phase 3.5, and it is carrying risk it need not have carried, because the framework decision was deferred four times without being surfaced.
+
+---
+
+## Changelog
+
+This document is maintained, not archived. When something here stops being true, it gets amended and dated — a stack review that freezes as a snapshot of one afternoon is worse than none, because it is confidently wrong later.
+
+- **2026-08-12 (written)** — Phase 4. Recorded the framework gap, the unchecked backend types, the duplicated contract, and the untested deployment path.
+- **2026-08-12 (amended)** — §5.1 and §5.2 closed the same day: TypeScript added and the backend type-checked for the first time (7 errors, none in `api/src/`); `contract.ts` made the single source of truth with a sync-and-check script, drift detection verified by deliberately breaking it. §1's deployment gap is unchanged and remains the largest open risk.
