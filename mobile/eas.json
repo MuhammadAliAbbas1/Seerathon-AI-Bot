@@ -8,6 +8,10 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "//": "EAS builds the COMMITTED git tree, and mobile/.env is gitignored — so a local .env never reaches the builder and EXPO_PUBLIC_API_URL would be undefined in the APK. Build-time env belongs here. This LAN address is machine-specific and NOT the submission value; Phase 3.5 replaces it with the deployed URL.",
+        "EXPO_PUBLIC_API_URL": "http://192.168.100.10:8787"
       }
     },
     "production": {
