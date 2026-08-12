@@ -11,6 +11,7 @@
  * The batch runs to completion and reports at the end. Nothing is fixed
  * between cases — we study the failures as a set and fix once.
  */
+import { pace } from "../src/pace.ts";
 import { createGeminiProvider } from "../src/providers/gemini.ts";
 import { withFixtures } from "../src/providers/fixtures.ts";
 import { detectLanguage, answerLanguage } from "../src/language.ts";
@@ -102,7 +103,10 @@ interface Row extends Case {
 
 const rows: Row[] = [];
 
+let first = true;
 for (const c of CASES) {
+  if (!first) await pace("gemini-2.5-flash-lite", c.id);
+  first = false;
   const detected = detectLanguage(c.question);
   const language = answerLanguage(detected);
   const ratchet = rulingRatchet(c.question);

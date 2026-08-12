@@ -1,104 +1,223 @@
-// Throwaway hello-world for Phase 1(c) — its job is to de-risk the EAS
-// pipeline AND answer the font questions from CLAUDE.md §7.1 in one install.
-//
-// Read this screen on a real device, not the emulator. RN's RTL handling and
-// Android's font fallback both differ between them (§7.1).
-//
-// Every Urdu string below is real corpus text from corpus.json, not invented
-// sample text — the point is to see what the app will actually have to render.
-
+import { useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { I18nManager, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ask } from "./src/api";
+import type { AskResponse, Citation, Language, Mode } from "./src/api";
+import { AboutScreen } from "./src/AboutScreen";
+import { BotBubble, DisclaimerBar, EmptyState, Header, UserBubble } from "./src/components";
+import { color, isUr, space, type } from "./src/theme";
+import { t } from "./src/strings";
 
-// U+FDFA ARABIC LIGATURE SALLALLAHOU ALAYHE WASALLAM.
-// Written as an escape so the file's own encoding can never be the variable:
-// if this renders and the literal below does not, the bug is the file, not
-// the font.
-const SALLALLAHU_ESCAPED = "ﷺ";
-const SALLALLAHU_LITERAL = "ﷺ";
+/**
+ * Seerathon chat surface, built to §12.
+ *
+ * Everything a user reads on a non-answer path comes from the SERVER, not from
+ * here — one source of truth for the copy that carries three of the four
+ * rubric behaviours (§7.1).
+ */
 
-// From corpus.json — entry 672b3e8ed458540020750eab.
-const UR_TITLE = "حضور ر ﷺکا  ذاتی انتقام نہ لینا";
-const UR_HAWALA = "(صحیح بخاری حدیث 3560)"; // Urdu + Latin digits: mixed direction
-const UR_BODY =
-  "عائشہ رضی اللہ عنہا سے روایت ہے کہ حضورﷺ  نے اپنی ذات کے لیے کبھی کسی سے بد لہ نہیں لیا ۔";
-const EN_TITLE = "Sayyid al-Mursalin ﷺ never took personal revenge";
+interface Turn {
+  id: number;
+  role: "user" | "bot";
+  text: string;
+  lang: Language;
+  mode?: Mode | "quota" | "error";
+  citations?: Citation[];
+}
 
-function Row({ label, children, note }: { label: string; children: React.ReactNode; note?: string }) {
+/** Shown until the first server response tells us the real one. */
+const BOOT_DISCLAIMER: Record<Language, string> = {
+  en: "Answers come only from an approved Seerah and Shamail collection, and each one shows its source. This is not a source of religious rulings.",
+  ur: "جوابات صرف منظور شدہ سیرت و شمائل کے ذخیرے سے آتے ہیں، اور ہر جواب اپنا حوالہ ساتھ دکھاتا ہے۔ یہ شرعی احکام کا ذریعہ نہیں۔",
+};
+
+export default function App() {
+  const [lang, setLang] = useState<Language>("en");
+  const [screen, setScreen] = useState<"chat" | "about">("chat");
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [disclaimer, setDisclaimer] = useState<string>(BOOT_DISCLAIMER.en);
+  const scroller = useRef<ScrollView>(null);
+  const nextId = useRef(1);
+
+  if (screen === "about") {
+    return <AboutScreen lang={lang} onBack={() => setScreen("chat")} />;
+  }
+
+  const submit = async (raw?: string) => {
+    const question = (raw ?? input).trim();
+    if (!question || busy) return;
+    setInput("");
+    setBusy(true);
+
+    setTurns((prev) => [...prev, { id: nextId.current++, role: "user", text: question, lang }]);
+    requestAnimationFrame(() => scroller.current?.scrollToEnd({ animated: true }));
+
+    const res: AskResponse = await ask(question, lang);
+
+    setTurns((prev) => {
+      if (res.kind === "ok") {
+        return [
+          ...prev,
+          {
+            id: nextId.current++,
+            role: "bot",
+            // The server's language is AUTHORITATIVE — it may have detected
+            // Urdu from the question regardless of the toggle (§5.4).
+            lang: res.language,
+            text: res.answer,
+            mode: res.mode,
+            citations: res.citations,
+          },
+        ];
+      }
+      return [
+        ...prev,
+        {
+          id: nextId.current++,
+          role: "bot",
+          lang: res.language,
+          // Quota and outage copy comes from the server too, so it is
+          // localized and worded once.
+          text: res.message || t("offline", res.language),
+          mode: res.code === "quota_exhausted" ? "quota" : "error",
+        },
+      ];
+    });
+
+    if (res.kind === "ok") {
+      setDisclaimer(res.disclaimer);
+      if (res.language !== lang) setLang(res.language);
+    }
+    setBusy(false);
+    requestAnimationFrame(() => scroller.current?.scrollToEnd({ animated: true }));
+  };
+
   return (
-    <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
-      {children}
-      {note ? <Text style={styles.note}>{note}</Text> : null}
+    <View style={s.root}>
+      <StatusBar style="dark" />
+      <Header
+        lang={lang}
+        title={t("appTitle", lang)}
+        onToggleLang={() => {
+          const next: Language = lang === "en" ? "ur" : "en";
+          setLang(next);
+          setDisclaimer(BOOT_DISCLAIMER[next]);
+        }}
+        onAbout={() => setScreen("about")}
+      />
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          ref={scroller}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: space.xl }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {turns.length === 0 ? (
+            <EmptyState lang={lang} onPick={(q) => submit(q)} />
+          ) : (
+            turns.map((turn) =>
+              turn.role === "user" ? (
+                <UserBubble key={turn.id} text={turn.text} lang={turn.lang} />
+              ) : (
+                <BotBubble
+                  key={turn.id}
+                  text={turn.text}
+                  lang={turn.lang}
+                  mode={turn.mode ?? "in_corpus"}
+                  citations={turn.citations}
+                />
+              )
+            )
+          )}
+          {busy && (
+            <View style={s.busy}>
+              <ActivityIndicator color={color.primary} />
+              <Text style={[type.meta, { marginLeft: space.sm }]}>{t("thinking", lang)}</Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Pinned, non-dismissible, and deliberately the quietest thing on
+            screen. Off-style for the reference app, required by the rubric
+            (§12.3) — it does not collapse and it has no close affordance. */}
+        <DisclaimerBar text={disclaimer} lang={lang} />
+
+        <View style={s.composer}>
+          <TextInput
+            style={[
+              s.input,
+              isUr(lang) && { textAlign: "right", writingDirection: "rtl", fontSize: 17, lineHeight: 26 },
+            ]}
+            value={input}
+            onChangeText={setInput}
+            placeholder={t("placeholder", lang)}
+            placeholderTextColor={color.textSoft}
+            multiline
+            onSubmitEditing={() => submit()}
+            editable={!busy}
+          />
+          <Pressable
+            onPress={() => submit()}
+            disabled={busy || !input.trim()}
+            style={[s.send, (busy || !input.trim()) && { opacity: 0.4 }]}
+          >
+            <Text style={s.sendText}>{t("send", lang)}</Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
-export default function App() {
-  return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.h1}>Seerathon — render check</Text>
-      <Text style={styles.sub}>
-        Phase 1(c) throwaway. If anything below is a tofu box (□) or reads
-        left-to-right when it should read right-to-left, say so before Phase 4.
-      </Text>
-
-      <Row label="1 · ﷺ glyph, escaped (U+FDFA), 64pt" note="A box here means the font lacks the glyph.">
-        <Text style={styles.glyph}>{SALLALLAHU_ESCAPED}</Text>
-      </Row>
-
-      <Row label="2 · ﷺ glyph, literal in source" note="Differs from #1 ⇒ file encoding problem, not a font problem.">
-        <Text style={styles.glyph}>{SALLALLAHU_LITERAL}</Text>
-      </Row>
-
-      <Row label="3 · Urdu title (RTL)" note="Should start at the RIGHT edge.">
-        <Text style={styles.urdu}>{UR_TITLE}</Text>
-      </Row>
-
-      <Row label="4 · Urdu body (RTL, multi-line)" note="Line breaks should stack right-aligned.">
-        <Text style={styles.urdu}>{UR_BODY}</Text>
-      </Row>
-
-      <Row
-        label="5 · Mixed direction: Urdu + Latin digits"
-        note="Digits 3560 must stay 3-5-6-0 and sit in the right place. This is the case most likely to break."
-      >
-        <Text style={styles.urdu}>{UR_HAWALA}</Text>
-      </Row>
-
-      <Row label="6 · English with ﷺ inline" note="Glyph should sit on the baseline, not clip.">
-        <Text style={styles.english}>{EN_TITLE}</Text>
-      </Row>
-
-      <Row label="7 · Environment">
-        <Text style={styles.mono}>
-          {`platform      ${Platform.OS} ${Platform.Version}\n` +
-            `I18nManager.isRTL   ${I18nManager.isRTL}\n` +
-            `allowRTL / forceRTL not set by this build`}
-        </Text>
-      </Row>
-
-      <Text style={styles.footer}>
-        Font decision belongs in Phase 1, not Phase 4 — it affects bundle size.
-      </Text>
-      <StatusBar style="auto" />
-    </ScrollView>
-  );
-}
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fdfdfb" },
-  content: { padding: 20, paddingTop: 64, paddingBottom: 48 },
-  h1: { fontSize: 22, fontWeight: "600", color: "#14281d" },
-  sub: { fontSize: 13, color: "#5b6b60", marginTop: 6, marginBottom: 24, lineHeight: 19 },
-  row: { marginBottom: 26, borderTopWidth: 1, borderTopColor: "#e4eae5", paddingTop: 12 },
-  label: { fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: "#7c8b81", marginBottom: 8 },
-  note: { fontSize: 12, color: "#94a29a", marginTop: 8, fontStyle: "italic" },
-  glyph: { fontSize: 64, color: "#14281d", textAlign: "center" },
-  // writingDirection is the explicit signal. Without it the platform guesses
-  // from the first strong character, which is the thing we want to observe.
-  urdu: { fontSize: 22, lineHeight: 40, color: "#14281d", textAlign: "right", writingDirection: "rtl" },
-  english: { fontSize: 17, lineHeight: 26, color: "#14281d" },
-  mono: { fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 12, color: "#3d4f45", lineHeight: 18 },
-  footer: { fontSize: 12, color: "#94a29a", marginTop: 8 },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: color.bg },
+  busy: { flexDirection: "row", alignItems: "center", padding: space.xl },
+  composer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: space.sm,
+    padding: space.md,
+    paddingBottom: space.xl,
+    backgroundColor: color.bg,
+    borderTopWidth: 1,
+    borderTopColor: color.divider,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.divider,
+    borderRadius: 14,
+    paddingHorizontal: space.lg,
+    paddingTop: 11,
+    paddingBottom: 11,
+    fontSize: 15,
+    lineHeight: 21,
+    maxHeight: 120,
+    color: color.text,
+  },
+  send: {
+    backgroundColor: color.primary,
+    borderRadius: 12,
+    paddingHorizontal: space.xl,
+    paddingVertical: 13,
+  },
+  sendText: { color: color.onPrimary, fontWeight: "700", fontSize: 14 },
 });

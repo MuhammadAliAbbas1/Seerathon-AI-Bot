@@ -311,6 +311,13 @@ Rate limits are **per project, not per API key** (confirmed in docs) and appear 
 
 **To measure:** read the **`Gemini 2.5 Flash`** and **`Gemini 2.5 Flash-Lite`** rows in AI Studio for project `268175794480` and record RPM / TPM / RPD for each. Known spend against this project so far: **1 request to `gemini-2.5-flash`, 6 to `gemini-2.5-flash-lite`**, plus one `GET /models` — if the two models' daily counters differ by that split, RPD is per-model; if a single aggregate moved by 7, it is project-wide.
 
+⚠️ **RPM on the answering model is a DEMO risk, not just a batch-runner problem.** Measured: `gemini-2.5-flash` returned 429 after **6 answer calls in ~31 seconds**. That is an RPM ceiling, and **five questions a minute is a rate a judge can reach with rapid follow-ups** — so `quota_exhausted` is a string that may genuinely be read on stage.
+
+Two consequences, both binding:
+
+- **The quota copy must read as graceful, not as a failure.** It is "the service is briefly at capacity", never an error code, never red. §12.2 requires the UI to render that mode as calmly as a refusal — a red alert mid-demo reads as a crash even when the system is behaving exactly as designed.
+- **Any batch runner must pace itself:** ≥13 s between calls on `gemini-2.5-flash`, ≥7 s on `gemini-2.5-flash-lite`. A human asking questions will not hit this; a loop will, and it will burn the daily budget discovering that.
+
 **Measured 2026-08-12, from a real 9-request batch** (fixtures in `api/fixtures/` carry the `usageMetadata`):
 
 | Quantity | Value |

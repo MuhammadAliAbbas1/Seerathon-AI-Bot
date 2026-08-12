@@ -7,6 +7,7 @@
  *
  * Runs to completion. Nothing is fixed between cases.
  */
+import { pace } from "../src/pace.ts";
 import { createGeminiProvider } from "../src/providers/gemini.ts";
 import { withFixtures } from "../src/providers/fixtures.ts";
 import { ask } from "../src/ask.ts";
@@ -72,7 +73,11 @@ console.log();
 
 const results: any[] = [];
 
+let first = true;
 for (const c of CASES) {
+  // Pace on the ANSWER model, the tighter of the two limits.
+  if (!first) await pace("gemini-2.5-flash", c.id);
+  first = false;
   const t0 = Date.now();
   let r: any, err: string | null = null;
   try {

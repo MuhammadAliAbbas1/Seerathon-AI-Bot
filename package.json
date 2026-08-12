@@ -7,6 +7,8 @@
   },
   "scripts": {
     "corpus:sync": "node scripts/corpus-sync.mjs",
-    "test": "node --test api/tests/*.test.ts"
+    "test": "node --test api/tests/*.test.ts",
+    "dev:api": "node api/scripts/dev-server.ts",
+    "dev:api:live": "node api/scripts/dev-server.ts --live"
   }
 }

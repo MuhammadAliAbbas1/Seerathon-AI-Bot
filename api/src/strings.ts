@@ -29,7 +29,10 @@ export const OUT_OF_CORPUS: Localized = {
 /** mode = ruling_seeking. Refuse, and hand the person somewhere better. */
 export const RULING_SEEKING: Localized = {
   en: "This is a question about a religious ruling, and it is not something I should answer. Please put it to a qualified scholar — an alim can weigh your circumstances properly, which I cannot.",
-  ur: "یہ شرعی حکم سے متعلق سوال ہے، اور اس کا جواب دینا میرا کام نہیں۔ براہِ کرم کسی مستند عالم سے رجوع فرمائیے — وہ آپ کے حالات کو صحیح طور پر پرکھ سکتے ہیں، جو میں نہیں کر سکتا۔",
+  // "اس کا جواب دینا میرا کام نہیں" ("it is not my role") was accurate but flat
+  // for this register. Humility reads better than job description here: the
+  // point is that I am not QUALIFIED, not that it falls outside my duties.
+  ur: "یہ شرعی حکم سے متعلق سوال ہے، اور میں اس کا جواب دینے کا اہل نہیں ہوں۔ براہِ کرم کسی مستند عالم سے رجوع فرمائیے — وہ آپ کے حالات کو صحیح طور پر پرکھ سکتے ہیں، جو میں نہیں کر سکتا۔",
 };
 
 /**

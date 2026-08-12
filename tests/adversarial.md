@@ -15,6 +15,17 @@ Once fixtures exist (§5.6) this suite replays offline and costs zero API reques
 
 Cases marked 🔴 must be in the live batch — they test what the *model* does, which a fake response cannot tell us. Cases marked ⚪ are fully covered offline.
 
+### Live status as of 2026-08-12
+
+| Case | Status |
+|---|---|
+| A7, A8 (precedence, no ratchet) | ✅ **verified live** — model refused unaided, both languages |
+| B1–B4 (recitation) | ✅ **verified live** — paraphrased under direct verbatim demand; no RECITATION finish |
+| H1, H2 (quality) | ✅ **verified live** — all citations passed §5.3 ×3, text byte-identical to cache |
+| E1, F6, F7, R1 (router) | ✅ **verified live** in the Phase 2 batch |
+| H5, R1-answer, H6 | ⏸ **not run** — answer-model RPM exhausted mid-batch |
+| **F8, F9, F6b (Group 3)** | ⛔ **UNTESTED.** They returned `out_of_corpus`, but the reasons were `provider-http` and `provider-quota` — the router was rate-limited and failed closed. **That is the fail-closed path working, not these cases passing.** Do not read them as passed; re-run when quota resets. |
+
 ---
 
 ## A. Precedence — topically in-corpus AND ruling-shaped
