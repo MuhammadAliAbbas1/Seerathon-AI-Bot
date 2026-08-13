@@ -20,6 +20,6 @@
     "skipLibCheck": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["server.ts", "api/**/*.ts", "scripts/**/*.mjs"],
+  "include": ["server.ts", "api/**/*.ts", "tests/**/*.ts", "scripts/**/*.mjs"],
   "exclude": ["node_modules", "mobile"]
 }

@@ -24,6 +24,12 @@ const TOKENS = [
   "halal", "haraam", "haram", "makruh", "makrooh", "mustahab", "wajib", "waajib",
   "fard", "farz", "sunnah", "sunnat", "fatwa", "fatwah", "hukm", "hukum", "shariah",
   "sharia", "shar'i", "impermissible", "permissible", "obligatory", "forbidden",
+  // "permitted" was missing while "permissible" was present, so F5 — "…Is X
+  // permitted?" — cleared the ratchet while the suite asserted it did not.
+  // The miss cost nothing (the model classified it anyway, which is the whole
+  // point of a one-way ratchet); the false claim of coverage was the damage.
+  // Adding a token can only ever escalate toward refusal, so this is free.
+  "permitted", "impermissible", "unlawful", "lawful",
   "sinful", "gunah", "gunnah", "jaiz", "jaez", "jayaz", "jaayaz", "najaiz", "najaez",
   // Urdu script
   "جائز", "ناجائز", "حرام", "حلال", "واجب", "فرض", "مکروہ", "مستحب",
