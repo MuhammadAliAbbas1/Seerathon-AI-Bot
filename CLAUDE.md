@@ -693,7 +693,21 @@ The path:
 Two things Phase 0 flagged that will otherwise bite:
 
 - **RTL must be tested on a real device, not the emulator.** Urdu is right-to-left, and RN's RTL handling differs between emulator and hardware — text alignment, cursor position, mixed-direction strings (an Urdu sentence containing `ﷺ`, a Latin name, or a digit), and where punctuation lands. The corpus is full of mixed-direction text: inline Arabic phrases, the ﷺ glyph (U+FDFA), Latin-script names inside Urdu prose, and numeric hadith references like `(صحیح بخاری حدیث 3560)`. Assume it renders wrong until seen on the device.
-- **Roman-Urdu input is likely from real users.** The corpus itself carries `slug.romanUrdu` and roman-Urdu in `keywords[]` (`huzoor-ka-zaati-intiqam-na-lena`, `nby`, `akhlaqy`) — the organizers' own data models users who type Urdu in Latin script. So `"huzoor ka akhlaq kaisa tha"` is a realistic question, and language detection must handle it: **script is not a reliable language signal.** Roman-Urdu should route to Urdu content; whether it gets an Urdu-script or roman-Urdu *answer* is a §4-style open question — lean Urdu script, since that is what the corpus contains and what we can cite. This matters doubly for ruling detection (§5.5), where the signal words arrive as `kya jaiz hai` in Latin script.
+- **Roman-Urdu input is likely from real users.** The corpus itself carries `slug.romanUrdu` and roman-Urdu in `keywords[]` (`huzoor-ka-zaati-intiqam-na-lena`, `nby`, `akhlaqy`) — the organizers' own data models users who type Urdu in Latin script. So `"huzoor ka akhlaq kaisa tha"` is a realistic question, and language detection must handle it: **script is not a reliable language signal.** This matters doubly for ruling detection (§5.5), where the signal words arrive as `kya jaiz hai` in Latin script.
+
+#### Roman-Urdu is an INPUT form, never an output form — settled 2026-08-14
+
+~~Whether roman-Urdu gets an Urdu-script or roman-Urdu answer is an open question~~ — **closed. Roman-Urdu input routes to the Urdu block and is answered in Urdu script.** We will not generate roman-Urdu answers.
+
+Three reasons, strongest first:
+
+1. **§5.3 check 3 already forbids it.** That check exists because citing an entry whose text is in the other language *"produces a source card the user cannot read, and an answer that cannot be checked against its own citation."* A roman-Urdu answer with Urdu-script source cards recreates precisely that condition — via script instead of language. This is not a new rule; it is the existing one in a new dimension.
+2. **Transliteration is a transformation of scripture text, and §7.1's entire safety claim is *select, never translate*.** Roman source cards would have to be produced by the model, which §5.4 forbids outright ("the model never generates corpus text"). A mis-transliterated hadith is a corrupted hadith — the same harm class as a fabricated one (§2), and **worse for looking authentic**.
+3. **A deterministic, code-based transliterator does not rescue it.** Romanization has several competing conventions and is genuinely lossy; being rule-based would make it *confidently* wrong rather than probabilistically wrong, which is not an improvement for religious text.
+
+⚠️ **The honest cost, named rather than buried:** this leaves a real user unserved — someone who writes roman-Urdu comfortably but cannot read Nastaliq easily. Their route is to ask in English. That is a **corpus constraint, not a product choice**: the corpus ships two blocks, and the organizers themselves model roman-Urdu only as *input* (`slug.romanUrdu`, `keywords[]`), never as content.
+
+**Reopening condition:** if the organizers ever ship a roman-Urdu content block, this reopens immediately and cheaply — it would then be **selection**, which is safe, rather than transformation, which is not. That distinction is the whole of §7.1. Nothing else should reopen it; in particular, "users are asking for it" is not sufficient, because the objection is about what we can stand behind, not about demand.
 
 ---
 
