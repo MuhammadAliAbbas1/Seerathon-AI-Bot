@@ -911,3 +911,12 @@ Two corrections to §12.1:
 ⚠️ **Disabling edge-to-edge is a dead end.** It can be turned off on Android 15 and below, but **Android 16 removed the opt-out**, so it would work today and break on exactly the device a judge might be carrying.
 
 **Conclusion: stop measuring the keyboard from JS.** `react-native-keyboard-controller` reads `WindowInsets.ime` natively — the OS's own authority on where the keyboard is — so there is no reference frame left to get wrong. This is Expo's own recommendation for edge-to-edge, and it is the difference between a fix that is correct by construction and one that is correct on one device.
+
+**Applied 2026-08-13.** `KeyboardProvider` at the root, the library's `KeyboardAvoidingView behavior="padding"` wrapping the column. `useKeyboardState` is used *only* to drop the composer's bottom safe-area inset while the keyboard is open — the offset itself is the library's job, and adding the inset on top of it would leave a visible gap.
+
+⚠️ **This pulled in `react-native-reanimated` (a hard peer) and `react-native-worklets`.** Two things about that, both checked rather than assumed:
+
+- **No `babel.config.js` is required.** `babel-preset-expo@57` adds the worklets plugin automatically when the package is present (`configs/expo.js`: *"Automatically add worklets or reanimated plugin when package is installed"*). A missing Reanimated babel plugin is a **crash at launch**, not a degraded feature, so this was verified in the installed preset before building.
+- **Reanimated is declared explicitly in `package.json`**, not left as an auto-installed peer. Autolinking and the babel preset both depend on it being present; an undeclared dependency that the build relies on is a landmine for the next `npm install`.
+
+**Three dependencies now, all in the app and none in the backend** (the server is still at zero runtime deps): `react-native-safe-area-context`, `expo-clipboard`, `react-native-keyboard-controller`.
