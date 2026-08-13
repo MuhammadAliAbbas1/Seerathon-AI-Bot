@@ -53,6 +53,14 @@ export const UI: Record<string, L> = {
   next: { en: "Next source", ur: "اگلا حوالہ" },
   copy: { en: "Copy", ur: "نقل کریں" },
   copied: { en: "Copied", ur: "نقل ہو گیا" },
+  /**
+   * Heading for the sources appended to a copied ANSWER.
+   *
+   * Copying an answer without its citation would put an unsourced religious
+   * claim in someone's clipboard — the exact thing §5.3 exists to prevent,
+   * escaping through the one door validation does not watch.
+   */
+  copiedSources: { en: "Sources:", ur: "حوالہ جات:" },
   shamail: { en: "Shamail", ur: "شمائل" },
   timeline: { en: "Seerah timeline", ur: "سیرت ٹائم لائن" },
 };

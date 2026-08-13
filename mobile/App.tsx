@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Keyboard,
   Pressable,
   ScrollView,
@@ -15,8 +14,8 @@ import { StatusBar } from "expo-status-bar";
 import { ask } from "./src/api";
 import type { AskResponse, Citation, Language, Mode } from "./src/api";
 import { AboutScreen } from "./src/AboutScreen";
-import { BotBubble, DisclaimerBar, EmptyState, Header, UserBubble } from "./src/components";
-import { color, isUr, space, type } from "./src/theme";
+import { BotBubble, DisclaimerBar, EmptyState, Header, PendingBubble, UserBubble } from "./src/components";
+import { color, isUr, space } from "./src/theme";
 import { t } from "./src/strings";
 
 /**
@@ -218,12 +217,9 @@ function Root() {
             )
           )
         )}
-        {busy && (
-          <View style={[s.busy, isUr(lang) && { flexDirection: "row-reverse" }]}>
-            <ActivityIndicator color={color.primary} />
-            <Text style={[type.meta, { marginHorizontal: space.sm }]}>{t("thinking", lang)}</Text>
-          </View>
-        )}
+        {/* In the bot's own position and bubble shape, so it reads as the
+            answer being composed rather than as a detached spinner. */}
+        {busy && <PendingBubble lang={lang} />}
       </ScrollView>
 
       {/* Pinned, non-dismissible, and deliberately the quietest thing on
@@ -276,7 +272,6 @@ function Root() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
-  busy: { flexDirection: "row", alignItems: "center", padding: space.xl },
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",

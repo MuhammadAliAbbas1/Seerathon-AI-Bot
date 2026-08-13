@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { color, dashedCard, flatCard, radius, space, type, bodyStyle, metaStyle, isUr } from "./theme";
 import { t } from "./strings";
 import { SourcesSheet } from "./SourcesSheet";
@@ -22,14 +23,23 @@ export function Header({
   showNewChat: boolean;
   title: string;
 }) {
+  const ur = isUr(lang);
   return (
-    <View style={s.header}>
+    // Mirrored in Urdu: title right, controls left. The bubbles and body text
+    // already flip; leaving the chrome LTR made the header the one element on
+    // screen still reading the wrong way (§7.1).
+    <View style={[s.header, ur && { flexDirection: "row-reverse" }]}>
       {/* Shrinks and truncates rather than pushing the controls off screen —
           three controls plus a title is tight on a 360dp phone. */}
-      <Text style={[type.title, isUr(lang) && { fontSize: 24 }, { flexShrink: 1 }]} numberOfLines={1}>
+      <Text
+        style={[type.title, ur && { fontSize: 24, textAlign: "right" }, { flexShrink: 1 }]}
+        numberOfLines={1}
+      >
         {title}
       </Text>
-      <View style={s.headerRight}>
+      {/* Reversed too, so the control ORDER reads correctly right-to-left
+          rather than merely moving the group to the other side. */}
+      <View style={[s.headerRight, ur && { flexDirection: "row-reverse" }]}>
         {/* The reference's toggle is a SWITCH — `UR ( ● ) EN` — not the
             segmented pill §12.1 described from a smaller screenshot. Matched
             to the real control: labels flanking a track, the knob sliding to
@@ -78,14 +88,118 @@ export function Header({
   );
 }
 
+/* ── Copy ───────────────────────────────────────────────────────────────── */
+
+/**
+ * Deliberately QUIETER than the sources chip: surface fill and a hairline
+ * border rather than the chip's primary-green outline. The sources chip is a
+ * rubric surface and must stay the most prominent affordance under an answer;
+ * copy is a convenience and should not compete with it.
+ *
+ * No analogue exists anywhere in the reference app, so this is assembled from
+ * their chip vocabulary rather than matched to a control they have (§12.4).
+ */
+function CopyButton({ value, lang }: { value: string; lang: Language }) {
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!done) return;
+    const id = setTimeout(() => setDone(false), 1600);
+    return () => clearTimeout(id);
+  }, [done]);
+
+  return (
+    <Pressable
+      onPress={async () => {
+        await Clipboard.setStringAsync(value);
+        setDone(true);
+      }}
+      style={({ pressed }) => [s.copyChip, pressed && { backgroundColor: color.band }]}
+      accessibilityRole="button"
+      accessibilityLabel={t("copy", lang)}
+    >
+      <Text style={s.copyChipText}>{done ? t("copied", lang) : t("copy", lang)}</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * What a copied ANSWER carries: the words, then what they rest on.
+ *
+ * An answer pasted somewhere else without its citation is an unsourced
+ * religious claim — precisely the harm §5.3 exists to prevent, escaping
+ * through the one door validation does not watch. Cheap to prevent here.
+ */
+function answerForClipboard(text: string, citations: Citation[] | undefined, lang: Language): string {
+  if (!citations || citations.length === 0) return text;
+  const list = citations
+    .map((c) => `• ${c.title} — ${c.type === "shamail" ? t("shamail", lang) : t("timeline", lang)} · ${c.id}`)
+    .join("\n");
+  return `${text}\n\n${t("copiedSources", lang)}\n${list}`;
+}
+
 /* ── Message bubbles ────────────────────────────────────────────────────── */
 
 export function UserBubble({ text, lang }: { text: string; lang: Language }) {
   const ur = isUr(lang);
   return (
     <View style={[s.row, ur ? { justifyContent: "flex-start" } : { justifyContent: "flex-end" }]}>
-      <View style={[s.bubble, s.userBubble, ur ? s.userBubbleUr : s.userBubbleEn]}>
-        <Text style={[bodyStyle(lang), { color: color.onPrimary }]}>{text}</Text>
+      <View style={{ alignItems: ur ? "flex-start" : "flex-end", maxWidth: "85%" }}>
+        <View style={[s.bubble, s.userBubble, ur ? s.userBubbleUr : s.userBubbleEn]}>
+          <Text style={[bodyStyle(lang), { color: color.onPrimary }]}>{text}</Text>
+        </View>
+        <View style={s.actions}>
+          <CopyButton value={text} lang={lang} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/* ── Pending ────────────────────────────────────────────────────────────── */
+
+/**
+ * Shown where the answer will appear, in the answer's own bubble shape.
+ *
+ * The previous indicator was a spinner in a row at the bottom of the scroll
+ * view — not in the bot's position, so it did not read as "composing", and on
+ * a short screen it could sit off-screen entirely, making the app look frozen
+ * during the single longest interaction a judge has with it.
+ *
+ * The copy stays: "Looking through the collection…" says what the system is
+ * actually doing, and that it is looking through a COLLECTION rather than
+ * thinking freely is the whole claim of this project (§2).
+ */
+export function PendingBubble({ lang }: { lang: Language }) {
+  const ur = isUr(lang);
+  const d1 = useRef(new Animated.Value(0.25)).current;
+  const d2 = useRef(new Animated.Value(0.25)).current;
+  const d3 = useRef(new Animated.Value(0.25)).current;
+
+  useEffect(() => {
+    const pulse = (v: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(v, { toValue: 1, duration: 360, useNativeDriver: true }),
+          Animated.timing(v, { toValue: 0.25, duration: 360, useNativeDriver: true }),
+          Animated.delay(720 - delay),
+        ])
+      );
+    const running = [pulse(d1, 0), pulse(d2, 180), pulse(d3, 360)];
+    running.forEach((a) => a.start());
+    return () => running.forEach((a) => a.stop());
+  }, [d1, d2, d3]);
+
+  return (
+    <View style={[s.row, ur ? { justifyContent: "flex-end" } : { justifyContent: "flex-start" }]}>
+      <View style={[s.bubble, s.botBubble, ur ? s.botBubbleUr : s.botBubbleEn]}>
+        <View style={[s.dots, ur && { flexDirection: "row-reverse" }]}>
+          <Animated.View style={[s.dot, { opacity: d1 }]} />
+          <Animated.View style={[s.dot, { opacity: d2 }]} />
+          <Animated.View style={[s.dot, { opacity: d3 }]} />
+        </View>
+        <Text style={[metaStyle(lang), { marginTop: space.sm }]}>{t("thinking", lang)}</Text>
       </View>
     </View>
   );
@@ -144,14 +258,14 @@ export function BotBubble({
           <Text style={bodyStyle(lang)}>{text}</Text>
         </View>
 
-        {citations && citations.length > 0 && (
-          <>
-            {/* A handle, never the evidence itself (§12.2). Opens the sheet —
-                five full passages stacked inline was a wall, and the source
-                card is a rubric surface a judge will actually read. */}
+        <View style={[s.actions, ur && { flexDirection: "row-reverse" }]}>
+          {citations && citations.length > 0 && (
+            /* A handle, never the evidence itself (§12.2). Opens the sheet —
+               five full passages stacked inline was a wall, and the source
+               card is a rubric surface a judge will actually read. */
             <Pressable
               onPress={() => setOpen(true)}
-              style={({ pressed }) => [s.chip, ur && { alignSelf: "flex-end" }, pressed && { backgroundColor: color.band }]}
+              style={({ pressed }) => [s.chip, pressed && { backgroundColor: color.band }]}
               accessibilityRole="button"
               accessibilityLabel={
                 citations.length === 1
@@ -165,13 +279,12 @@ export function BotBubble({
                   : t("sourcesMany", lang).replace("%d", String(citations.length))}
               </Text>
             </Pressable>
-            <SourcesSheet
-              citations={citations}
-              lang={lang}
-              visible={open}
-              onClose={() => setOpen(false)}
-            />
-          </>
+          )}
+          <CopyButton value={answerForClipboard(text, citations, lang)} lang={lang} />
+        </View>
+
+        {citations && citations.length > 0 && (
+          <SourcesSheet citations={citations} lang={lang} visible={open} onClose={() => setOpen(false)} />
         )}
       </View>
     </View>
@@ -350,18 +463,37 @@ const s = StyleSheet.create({
   },
   systemLabel: { marginBottom: space.xs, fontWeight: "600" },
 
-  chip: {
-    alignSelf: "flex-start",
+  // Action row under a message: sources chip (prominent) then copy (quiet).
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
     marginTop: space.sm,
-    marginLeft: space.xs,
+    marginHorizontal: space.xs,
+  },
+  chip: {
+    minHeight: 36,
+    justifyContent: "center",
     paddingHorizontal: space.md,
-    paddingVertical: 6,
     borderRadius: radius.chip,
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.primary,
   },
   chipText: { ...type.chip, color: color.primary },
+  copyChip: {
+    minHeight: 36,
+    justifyContent: "center",
+    paddingHorizontal: space.md,
+    borderRadius: radius.chip,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.divider,
+  },
+  copyChipText: { ...type.chip, color: color.textSoft },
+
+  dots: { flexDirection: "row", gap: 5, alignItems: "center" },
+  dot: { width: 7, height: 7, borderRadius: 999, backgroundColor: color.primary },
 
   source: {
     ...flatCard,

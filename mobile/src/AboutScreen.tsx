@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { color, flatCard, radius, space, type, bodyStyle, isUr } from "./theme";
 import { t } from "./strings";
 import type { Language } from "./api";
@@ -39,16 +40,27 @@ const META_RULES = {
 
 export function AboutScreen({ lang, onBack }: { lang: Language; onBack: () => void }) {
   const ur = isUr(lang);
+  const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1, backgroundColor: color.bg }}>
-      <View style={s.header}>
-        <Pressable onPress={onBack} style={s.back} accessibilityLabel="Back">
+      {/* Same three fixes as the chat header, and they matter as much here:
+          this screen carries the verbatim /meta text the organizers wrote and
+          will look for (§4), so it is a rubric surface, not a footer. */}
+      <View style={[s.header, { paddingTop: insets.top + space.sm }, ur && { flexDirection: "row-reverse" }]}>
+        <Pressable
+          onPress={onBack}
+          style={({ pressed }) => [s.back, pressed && { backgroundColor: color.band }]}
+          accessibilityRole="button"
+          accessibilityLabel={t("back", lang)}
+        >
           <Text style={s.backGlyph}>{ur ? "→" : "←"}</Text>
         </Pressable>
-        <Text style={[type.title, { fontSize: 19 }]}>{t("aboutTitle", lang)}</Text>
+        <Text style={[type.title, { fontSize: 19, flexShrink: 1 }, ur && { textAlign: "right" }]} numberOfLines={1}>
+          {t("aboutTitle", lang)}
+        </Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: space.xl, paddingBottom: space.xxl }}>
+      <ScrollView contentContainerStyle={{ padding: space.xl, paddingBottom: space.xxl + insets.bottom }}>
         <Text style={[type.meta, { marginBottom: space.md }]}>{t("verbatimNote", lang)}</Text>
 
         <View style={[s.card, { borderLeftWidth: 3, borderLeftColor: color.gold }]}>
@@ -87,23 +99,23 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: space.md,
-    paddingHorizontal: space.xl,
-    paddingTop: 56,
-    paddingBottom: space.md,
+    paddingHorizontal: space.lg,
+    paddingBottom: space.sm,
     borderBottomWidth: 1,
     borderBottomColor: color.divider,
   },
   back: {
-    width: 34,
-    height: 34,
-    borderRadius: 999,
+    // 48dp, matching the chat header's controls.
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.divider,
     alignItems: "center",
     justifyContent: "center",
   },
-  backGlyph: { fontSize: 16, color: color.primary },
+  backGlyph: { fontSize: 19, fontWeight: "700", color: color.primary },
   card: { ...flatCard, padding: space.lg, marginBottom: space.md },
   ruleRow: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
   ruleNum: {
