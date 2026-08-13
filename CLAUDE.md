@@ -868,3 +868,24 @@ Note the split: the **logo** is teal + gold, but the **UI** is green + gold. Fol
 > **The persistent disclaimer bar has no equivalent in their app.** Nothing in the reference is permanently pinned above the input; their screens are clean, content-first, and unchromed. A persistent bar is therefore *off-style by construction*. It ships anyway — `usage_rules[5]` requires it and it is one of the four demo behaviours (§2). We reduce the friction by making it the quietest thing on screen (banded surface, secondary text, hairline rule), **not** by making it dismissible, collapsible, or shown-once. If it ever comes down to "it looks cleaner without it", it stays.
 
 Smaller conflicts to expect: the reference uses orange for its one high-emphasis CTA per screen, but our chat surface has no such CTA — **do not** find a use for orange just to match; leaving it unused is correct. And the reference renders `576.577` raw in its own timeline (screen 2) — we render `576–577 CE` (§ Phase 1a). Matching their design language does not mean inheriting their data bugs.
+
+### 12.4 Patterns found on a second pass — added 2026-08-13
+
+Extracted while building the sources sheet, by re-opening the images rather than trusting the prose above. Recorded so the next surface does not re-derive them.
+
+| Pattern | Where | What it is |
+|---|---|---|
+| **`"Trait 1 of 17"`** | screen3 | Their own **ordinal idiom**. Used verbatim in shape for the sheet — `"Source 1 of 5"` — instead of inventing a `‹ 1/5 ›` counter. Prefer their phrasing over a generic control whenever one exists |
+| **Numbered badges on a rail** | screen2 | Small tinted rounded-square badges (`1`, `2`, `3`…) down a vertical hairline. Borrowed for the per-source badge |
+| **Accordion** | screen4 | Deep-green header bar, white bold text, `▼`/`▲` chevron; expanded content is white cards on a **warmer** tint than the page. The nested-container tint is the reusable part |
+| **Meta rows** | screen3, screen5 | `·` and `|` separators with small line icons — `0 of 17 · 0 read`, `20 Lessons | 679 Enrolled Students` |
+| **Cards on a tinted ground** | screen5 | Content cards sit on `band`, not on the page cream, when grouped inside a container. The sheet's pager uses this |
+
+Two corrections to §12.1:
+
+- ⚠️ **The language control is a switch, not a pill** — already corrected inline above. This is the one that shipped wrong.
+- **The dashed border is not general.** §12.1 says "in places (profile stat cards) a 1px dashed border". True there, but the **Shamail stat cards use a solid hairline** (screen3). Dashed is a *profile-screen* tic, not the app's default card treatment. Ours uses it for the empty-state examples and the system-failure bubble, both deliberate.
+
+**No modal or bottom sheet exists anywhere in the reference.** The sheet container is therefore genuinely new, assembled from their card, header-button and ordinal vocabulary. Anything else with no analogue — a toast, a tooltip, a confirm dialog — is in the same position: derive it from their primitives, and say plainly that it is new rather than pretending it was matched.
+
+⚠️ **The ﷺ ligature crowds lines in the reference app too** (visible in screens 2 and 3, where it wraps onto its own line). So the crowding is inherent to the glyph, not a bug in our styling — `lineHeight` mitigates it and will not eliminate it. Do not chase a perfect fix.

@@ -17,7 +17,6 @@ export const UI: Record<string, L> = {
   thinking: { en: "Looking through the collection…", ur: "ذخیرے میں تلاش کیا جا رہا ہے…" },
   sourcesOne: { en: "1 source", ur: "۱ حوالہ" },
   sourcesMany: { en: "%d sources", ur: "%d حوالے" },
-  hideSources: { en: "Hide sources", ur: "حوالے چھپائیں" },
   back: { en: "Back", ur: "واپس" },
   emptyTitle: { en: "Ask about the Prophet ﷺ", ur: "نبی کریم ﷺ کے بارے میں پوچھیے" },
   emptyBody: {
@@ -44,6 +43,18 @@ export const UI: Record<string, L> = {
    * Calm on purpose: no "error", no "failed", no alarm.
    */
   systemNotice: { en: "Temporary service issue", ur: "عارضی تکنیکی مسئلہ" },
+
+  // ── Sources sheet ──────────────────────────────────────────────────────
+  sheetTitle: { en: "Sources", ur: "حوالہ جات" },
+  /** "Source 1 of 5" — the reference's own ordinal idiom ("Trait 1 of 17"). */
+  sourceOf: { en: "Source %n of %m", ur: "حوالہ %n از %m" },
+  close: { en: "Close", ur: "بند کریں" },
+  prev: { en: "Previous source", ur: "پچھلا حوالہ" },
+  next: { en: "Next source", ur: "اگلا حوالہ" },
+  copy: { en: "Copy", ur: "نقل کریں" },
+  copied: { en: "Copied", ur: "نقل ہو گیا" },
+  shamail: { en: "Shamail", ur: "شمائل" },
+  timeline: { en: "Seerah timeline", ur: "سیرت ٹائم لائن" },
 };
 
 export const t = (key: keyof typeof UI, lang: Language) => UI[key][lang];

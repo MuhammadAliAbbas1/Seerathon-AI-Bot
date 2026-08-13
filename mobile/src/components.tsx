@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { color, dashedCard, flatCard, radius, space, type, bodyStyle, metaStyle, isUr } from "./theme";
 import { t } from "./strings";
+import { SourcesSheet } from "./SourcesSheet";
 import type { Citation, Language, Mode } from "./api";
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
@@ -146,20 +147,31 @@ export function BotBubble({
 
         {citations && citations.length > 0 && (
           <>
+            {/* A handle, never the evidence itself (§12.2). Opens the sheet —
+                five full passages stacked inline was a wall, and the source
+                card is a rubric surface a judge will actually read. */}
             <Pressable
-              onPress={() => setOpen((v) => !v)}
-              style={[s.chip, ur && { alignSelf: "flex-end" }]}
-              accessibilityLabel="Show sources"
+              onPress={() => setOpen(true)}
+              style={({ pressed }) => [s.chip, ur && { alignSelf: "flex-end" }, pressed && { backgroundColor: color.band }]}
+              accessibilityRole="button"
+              accessibilityLabel={
+                citations.length === 1
+                  ? t("sourcesOne", lang)
+                  : t("sourcesMany", lang).replace("%d", String(citations.length))
+              }
             >
               <Text style={s.chipText}>
-                {open
-                  ? t("hideSources", lang)
-                  : citations.length === 1
-                    ? t("sourcesOne", lang)
-                    : t("sourcesMany", lang).replace("%d", String(citations.length))}
+                {citations.length === 1
+                  ? t("sourcesOne", lang)
+                  : t("sourcesMany", lang).replace("%d", String(citations.length))}
               </Text>
             </Pressable>
-            {open && citations.map((c) => <SourceCard key={c.id} c={c} lang={lang} />)}
+            <SourcesSheet
+              citations={citations}
+              lang={lang}
+              visible={open}
+              onClose={() => setOpen(false)}
+            />
           </>
         )}
       </View>
@@ -168,23 +180,15 @@ export function BotBubble({
 }
 
 /**
- * The source card. Everything in it comes from the baked corpus, read after
- * validation — the model supplied an id and nothing else (§5.4). This is the
- * only place verbatim corpus text ever reaches the user, which is also what
- * keeps Gemini's recitation filter out of the answer path.
+ * The source card now lives in SourcesSheet.tsx, one per page.
+ *
+ * The old inline version is deleted rather than kept "in case": it truncated
+ * the id to 8 characters, which is not a verifiable citation, and a second
+ * renderer for the same rubric surface is exactly how the two drift apart.
+ * Everything in it still comes from the baked corpus, read after validation —
+ * the model supplies an id and nothing else (§5.4), which is what keeps
+ * verbatim corpus text out of the model's output entirely.
  */
-export function SourceCard({ c, lang }: { c: Citation; lang: Language }) {
-  const ur = isUr(lang);
-  return (
-    <View style={[s.source, ur ? s.sourceUr : s.sourceEn]}>
-      <Text style={[metaStyle(lang), { color: color.primary, fontWeight: "600" }]}>{c.title}</Text>
-      <Text style={[bodyStyle(lang), { marginTop: space.sm }]}>{c.text}</Text>
-      <Text style={[metaStyle(lang), { marginTop: space.sm }]}>
-        {c.type === "shamail" ? "Shamail" : "Seerah timeline"} · {c.id.slice(0, 8)}…
-      </Text>
-    </View>
-  );
-}
 
 /* ── Persistent disclaimer ──────────────────────────────────────────────── */
 
