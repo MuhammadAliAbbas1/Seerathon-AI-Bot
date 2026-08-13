@@ -222,16 +222,17 @@ All guardrail logic, routing, and citation validation live server-side. A modifi
 // request
 {
   "question": "...",
-  "language": "en"              // en | ur — the client's hint; the server may override
-                                // it from detected question language (§7.1)
+  "language": "en"              // en | ur — ACCEPTED AND NOT READ. See below.
 }
 
 // response
 {
   "mode": "in_corpus",          // in_corpus | out_of_corpus | ruling_seeking
   "language": "en",             // en | ur — the language THIS response is written in.
-                                // Authoritative. The client renders direction and
-                                // font from this, not from what it asked for.
+                                // Authoritative FOR RENDERING THIS RESPONSE:
+                                // direction and font come from here, not from
+                                // what the client asked for. It does NOT govern
+                                // the shell — see below.
   "answer": "...",
   "citations": [
     {
@@ -243,6 +244,21 @@ All guardrail logic, routing, and citation validation live server-side. A modifi
   ]
 }
 ```
+
+#### The request `language` is accepted and NOT read — deliberately
+
+`handleAsk` passes it through as `languageHint` and **nothing ever consumes it.** `route()` derives the answer language solely from `detectLanguage(question)`. This is not an oversight and should not be "fixed":
+
+- **Detection is the safer authority.** The question itself is evidence; a stale toggle is not. A user who leaves the toggle on EN and types Urdu must get Urdu, and detection guarantees that without a tiebreak that could disagree.
+- **The obvious job for it — breaking ties on genuinely ambiguous input — was considered and rejected 2026-08-14.** Ambiguous cases are rare, and it would add a language-layer branch that is *genuinely hard to write a suite for*: there is no clean way to enumerate "ambiguous". **Untested paths in language detection is precisely where the `"he"` bug lived** — a weak roman-Urdu marker that would have shipped a bot answering half its English questions in Urdu, and which survived casual testing. That class of bug is not worth reopening for a rare input.
+
+The field stays on the wire because removing it would be a contract change for no gain, and because §8's forward-compatibility argument applies: a field that exists costs nothing, while adding one after the APK ships costs a rebuild.
+
+**What the toggle actually controls**, so it is not mistaken for dead weight: the **shell language** — header, placeholder, empty state, About screen, and the persistent disclaimer — which is a real job and reflects the user's reading preference.
+
+⚠️ **The toggle must not follow `response.language`.** It did once, so a roman-Urdu question silently moved a control the user had explicitly set. Nothing required it: each rendered turn carries its own language, so per-message rendering is already correct, and the hint is not read, so flipping changed nothing except overriding the user.
+
+⚠️ **The persistent disclaimer follows the SHELL language, not the last response.** It is chrome, not part of an answer. Adopt the server's copy only when `response.language` matches the shell; otherwise keep the shell-language one. Otherwise one Urdu question leaves an Urdu disclaimer under an English shell — a visible seam on the one element that is always on screen.
 
 Every field on a citation is read from the **cached corpus after validation**, never copied from the model's output — the model supplies an id and nothing else. `title` and `text` come from the same language block as `language`, so a source card can never mix scripts.
 

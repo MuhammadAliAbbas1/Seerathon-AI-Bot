@@ -206,8 +206,25 @@ function Root() {
     });
 
     if (res.kind === "ok") {
-      setDisclaimer(res.disclaimer);
-      if (res.language !== lang) setLang(res.language);
+      // ── The toggle is NOT touched, deliberately ──────────────────────────
+      //
+      // It used to follow res.language, so a roman-Urdu question silently
+      // moved a control the user had explicitly set. Nothing required that:
+      // §5.4's "authoritative" applies to how THIS response is rendered, and
+      // every Turn already carries its own `lang`, so direction and font are
+      // correct per message without the toggle being involved. The toggle's
+      // remaining jobs are the shell language and the request hint — and the
+      // hint is not read by the server at all, so flipping it changed nothing
+      // except overriding the user.
+      //
+      // ── The disclaimer follows the SHELL, not the response ───────────────
+      //
+      // It is persistent chrome, not part of an answer, so it belongs to the
+      // shell's language. Adopting the server's copy unconditionally would put
+      // an Urdu disclaimer under an English shell the moment someone asked one
+      // Urdu question — a visible seam on the one element that is always on
+      // screen, which is exactly what §7.1 exists to prevent.
+      if (res.language === lang) setDisclaimer(res.disclaimer);
     }
     setBusy(false);
   };

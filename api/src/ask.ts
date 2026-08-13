@@ -61,7 +61,20 @@ const SYSTEM_FAILURE_REASONS = new Set([
 
 export interface AskOptions {
   provider: LlmProvider;
-  /** Client hint. The server may override from detected language (§5.4). */
+  /**
+   * ⚠️ ACCEPTED AND NEVER READ — deliberately (§5.4).
+   *
+   * The answer language comes solely from `detectLanguage(question)`, because
+   * the question is evidence and a stale toggle is not: someone who leaves the
+   * toggle on EN and types Urdu must get Urdu.
+   *
+   * The obvious job for this — breaking ties on ambiguous input — was
+   * considered and rejected: "ambiguous" cannot be cleanly enumerated, so the
+   * branch would be untestable, and untested paths in language detection is
+   * exactly where the `"he"` bug lived. Kept on the wire for
+   * forward-compatibility only. If you are about to make this do something,
+   * read §5.4 first.
+   */
   languageHint?: Language;
   /** Accepted and deliberately ignored for now — see §8 and the note below. */
   history?: unknown;
