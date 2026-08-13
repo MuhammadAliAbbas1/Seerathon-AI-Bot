@@ -11,10 +11,20 @@ import {
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAvoidingView, KeyboardProvider, useKeyboardState } from "react-native-keyboard-controller";
 import { StatusBar } from "expo-status-bar";
+import * as Clipboard from "expo-clipboard";
 import { ask } from "./src/api";
 import type { AskResponse, Citation, Language, Mode } from "./src/api";
 import { AboutScreen } from "./src/AboutScreen";
-import { BotBubble, DisclaimerBar, EmptyState, Header, PendingBubble, UserBubble } from "./src/components";
+import {
+  BotBubble,
+  DisclaimerBar,
+  EmptyState,
+  Header,
+  PendingBubble,
+  UserBubble,
+  answerForClipboard,
+} from "./src/components";
+import { MessageMenu, type MenuAnchor } from "./src/MessageMenu";
 import { color, isUr, space } from "./src/theme";
 import { t } from "./src/strings";
 
@@ -94,6 +104,8 @@ function Root() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [disclaimer, setDisclaimer] = useState<string>(BOOT_DISCLAIMER.en);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [menu, setMenu] = useState<{ anchor: MenuAnchor; turn: Turn } | null>(null);
   const scroller = useRef<ScrollView>(null);
   const nextId = useRef(1);
 
@@ -115,7 +127,38 @@ function Root() {
     setTurns([]);
     setInput("");
     setBusy(false);
+    setEditingId(null);
+    setMenu(null);
     setDisclaimer(BOOT_DISCLAIMER[lang]);
+  };
+
+  /**
+   * Edit and resend.
+   *
+   * ⚠️ **An edit re-runs the FULL pipeline from scratch.** This is guaranteed by
+   * construction rather than by discipline: the wire contract is
+   * `{question, language, history}`, the server **ignores `history`**, and this
+   * function's only route back is `submit()` — the same call a freshly typed
+   * question makes. There is no code path that could carry a previous `mode`,
+   * route or citation set across an edit, because the client has nothing to
+   * carry them in. §5.2's router-first ordering therefore cannot be bypassed.
+   *
+   * Everything from the edited message onward is discarded, exactly as ChatGPT,
+   * Gemini and Claude do. Because §8 excludes conversation memory, editing an
+   * early message is semantically identical to editing the last one — each
+   * question is independent, so nothing needs reconstructing.
+   *
+   * **Quota: one edit costs one pipeline run — at most 2 provider calls**
+   * (router + answer), 1 if the router refuses, 0 if the keyword ratchet
+   * fires. Truncated turns are dropped, never regenerated, so the cost cannot
+   * multiply with conversation length.
+   */
+  const submitEdit = (turnId: number, next: string) => {
+    const index = turns.findIndex((turn) => turn.id === turnId);
+    if (index === -1) return;
+    setEditingId(null);
+    setTurns(turns.slice(0, index));
+    void submit(next);
   };
 
   const submit = async (raw?: string) => {
@@ -205,7 +248,15 @@ function Root() {
         ) : (
           turns.map((turn) =>
             turn.role === "user" ? (
-              <UserBubble key={turn.id} text={turn.text} lang={turn.lang} />
+              <UserBubble
+                key={turn.id}
+                text={turn.text}
+                lang={turn.lang}
+                editing={editingId === turn.id}
+                onLongPress={(anchor) => setMenu({ anchor, turn })}
+                onSubmitEdit={(next) => submitEdit(turn.id, next)}
+                onCancelEdit={() => setEditingId(null)}
+              />
             ) : (
               <BotBubble
                 key={turn.id}
@@ -213,6 +264,7 @@ function Root() {
                 lang={turn.lang}
                 mode={turn.mode ?? "in_corpus"}
                 citations={turn.citations}
+                onLongPress={(anchor) => setMenu({ anchor, turn })}
               />
             )
           )
@@ -229,9 +281,50 @@ function Root() {
           handled by shrinking the ROOT rather than by hiding the composer. */}
       <DisclaimerBar text={disclaimer} lang={lang} />
 
+      <MessageMenu
+        visible={menu !== null}
+        anchor={menu?.anchor ?? null}
+        lang={menu?.turn.lang ?? lang}
+        onClose={() => setMenu(null)}
+        actions={
+          menu
+            ? [
+                {
+                  key: "copy",
+                  label: t("copy", menu.turn.lang),
+                  onPress: () => {
+                    void Clipboard.setStringAsync(
+                      menu.turn.role === "bot"
+                        ? answerForClipboard(menu.turn.text, menu.turn.citations, menu.turn.lang)
+                        : menu.turn.text
+                    );
+                  },
+                },
+                // Only user messages are editable — an AI answer is not a
+                // prompt, and offering to "edit" one would invite putting words
+                // in the bot's mouth, which is the opposite of what a
+                // corpus-grounded bot is for.
+                ...(menu.turn.role === "user"
+                  ? [
+                      {
+                        key: "edit" as const,
+                        label: t("edit", menu.turn.lang),
+                        onPress: () => setEditingId(menu.turn.id),
+                      },
+                    ]
+                  : []),
+              ]
+            : []
+        }
+      />
+
+      {/* Hidden while editing: the edit has its own Send, and two send
+          affordances on screen at once is the classic way a user sends the
+          wrong thing. The disclaimer bar stays regardless (§12.3). */}
       <View
         style={[
           s.composer,
+          editingId !== null && { display: "none" },
           // Clear the gesture bar when the keyboard is closed; when it is open
           // KeyboardAvoidingView has already reserved that space, so adding
           // the inset again would leave a visible gap.

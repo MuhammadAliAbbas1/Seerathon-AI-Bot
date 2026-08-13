@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "en",
+    "question": "Tell me about eating with the right hand and how it applies to us now.",
+    "recordedAt": "2026-08-13T20:36:56.936Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "ruling_seeking",
+      "candidateIds": []
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"ruling_seeking\",\n  \"candidateIds\": []\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13997,
+        "candidatesTokenCount": 21,
+        "totalTokenCount": 14018,
+        "cachedContentTokenCount": 13063,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13997
+          }
+        ],
+        "cacheTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13063
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "5yp-aoXaF53insEPo9CSuAI"
+    }
+  }
+}

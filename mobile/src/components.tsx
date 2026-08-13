@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { color, dashedCard, flatCard, radius, space, type, bodyStyle, metaStyle, isUr } from "./theme";
 import { t } from "./strings";
 import { SourcesSheet } from "./SourcesSheet";
+import { CheckIcon, CopyIcon } from "./icons";
+import type { MenuAnchor } from "./MessageMenu";
 import type { Citation, Language, Mode } from "./api";
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
@@ -91,20 +93,24 @@ export function Header({
 /* ── Copy ───────────────────────────────────────────────────────────────── */
 
 /**
- * Deliberately QUIETER than the sources chip: surface fill and a hairline
- * border rather than the chip's primary-green outline. The sources chip is a
- * rubric surface and must stay the most prominent affordance under an answer;
- * copy is a convenience and should not compete with it.
+ * Persistent copy control under an ANSWER. Icon only, no label.
  *
- * No analogue exists anywhere in the reference app, so this is assembled from
- * their chip vocabulary rather than matched to a control they have (§12.4).
+ * Quiet by design: a bare icon in secondary grey against the sources chip's
+ * outlined primary-green pill. The sources chip is the rubric surface and must
+ * stay the most prominent affordance under an answer — moving user-message
+ * copy into a long-press menu and reducing this one to an icon makes the chip
+ * MORE prominent, not less.
+ *
+ * 48dp touch target with a 17px glyph: **visually lighter, not physically
+ * smaller.** Shrinking the target instead of the ink is the usual way this
+ * goes wrong.
  */
-function CopyButton({ value, lang }: { value: string; lang: Language }) {
+function CopyIconButton({ value, lang }: { value: string; lang: Language }) {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
     if (!done) return;
-    const id = setTimeout(() => setDone(false), 1600);
+    const id = setTimeout(() => setDone(false), 1500);
     return () => clearTimeout(id);
   }, [done]);
 
@@ -114,11 +120,12 @@ function CopyButton({ value, lang }: { value: string; lang: Language }) {
         await Clipboard.setStringAsync(value);
         setDone(true);
       }}
-      style={({ pressed }) => [s.copyChip, pressed && { backgroundColor: color.band }]}
+      style={({ pressed }) => [s.iconAction, pressed && { backgroundColor: color.band }]}
       accessibilityRole="button"
-      accessibilityLabel={t("copy", lang)}
+      accessibilityState={{ selected: done }}
+      accessibilityLabel={done ? t("copied", lang) : t("copyAnswer", lang)}
     >
-      <Text style={s.copyChipText}>{done ? t("copied", lang) : t("copy", lang)}</Text>
+      {done ? <CheckIcon size={17} tint={color.primary} /> : <CopyIcon size={17} tint={color.textSoft} />}
     </Pressable>
   );
 }
@@ -130,7 +137,7 @@ function CopyButton({ value, lang }: { value: string; lang: Language }) {
  * religious claim — precisely the harm §5.3 exists to prevent, escaping
  * through the one door validation does not watch. Cheap to prevent here.
  */
-function answerForClipboard(text: string, citations: Citation[] | undefined, lang: Language): string {
+export function answerForClipboard(text: string, citations: Citation[] | undefined, lang: Language): string {
   if (!citations || citations.length === 0) return text;
   const list = citations
     .map((c) => `• ${c.title} — ${c.type === "shamail" ? t("shamail", lang) : t("timeline", lang)} · ${c.id}`)
@@ -140,18 +147,97 @@ function answerForClipboard(text: string, citations: Citation[] | undefined, lan
 
 /* ── Message bubbles ────────────────────────────────────────────────────── */
 
-export function UserBubble({ text, lang }: { text: string; lang: Language }) {
+/**
+ * A user turn. No permanently visible buttons — copy and edit live behind a
+ * long press, which keeps the surface clean and leaves the sources chip as the
+ * only standing affordance in a conversation.
+ *
+ * While being edited the bubble becomes a text field in place, with Cancel and
+ * Send beneath it, as ChatGPT, Gemini and Claude all do.
+ */
+export function UserBubble({
+  text,
+  lang,
+  editing,
+  onLongPress,
+  onSubmitEdit,
+  onCancelEdit,
+}: {
+  text: string;
+  lang: Language;
+  editing?: boolean;
+  onLongPress?: (anchor: MenuAnchor) => void;
+  onSubmitEdit?: (next: string) => void;
+  onCancelEdit?: () => void;
+}) {
   const ur = isUr(lang);
-  return (
-    <View style={[s.row, ur ? { justifyContent: "flex-start" } : { justifyContent: "flex-end" }]}>
-      <View style={{ alignItems: ur ? "flex-start" : "flex-end", maxWidth: "85%" }}>
-        <View style={[s.bubble, s.userBubble, ur ? s.userBubbleUr : s.userBubbleEn]}>
-          <Text style={[bodyStyle(lang), { color: color.onPrimary }]}>{text}</Text>
-        </View>
-        <View style={s.actions}>
-          <CopyButton value={text} lang={lang} />
+  const ref = useRef<View>(null);
+  const [draft, setDraft] = useState(text);
+
+  // Reset the draft whenever a fresh edit begins, so a cancelled edit does not
+  // leak into the next one.
+  useEffect(() => {
+    if (editing) setDraft(text);
+  }, [editing, text]);
+
+  if (editing) {
+    return (
+      <View style={[s.row, ur ? { justifyContent: "flex-start" } : { justifyContent: "flex-end" }]}>
+        <View style={{ width: "92%" }}>
+          <View style={[s.bubble, s.editBubble]}>
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              multiline
+              autoFocus
+              style={[bodyStyle(lang), s.editInput]}
+              accessibilityLabel={t("editMessage", lang)}
+            />
+          </View>
+          <View style={[s.actions, ur && { flexDirection: "row-reverse" }]}>
+            <Pressable
+              onPress={onCancelEdit}
+              style={({ pressed }) => [s.copyChip, pressed && { backgroundColor: color.band }]}
+              accessibilityRole="button"
+              accessibilityLabel={t("cancel", lang)}
+            >
+              <Text style={s.copyChipText}>{t("cancel", lang)}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => draft.trim() && onSubmitEdit?.(draft.trim())}
+              disabled={!draft.trim()}
+              style={({ pressed }) => [s.sendChip, !draft.trim() && { opacity: 0.4 }, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t("send", lang)}
+            >
+              <Text style={s.sendChipText}>{t("send", lang)}</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
+    );
+  }
+
+  return (
+    <View style={[s.row, ur ? { justifyContent: "flex-start" } : { justifyContent: "flex-end" }]}>
+      <Pressable
+        ref={ref}
+        onLongPress={() =>
+          ref.current?.measureInWindow((x, y, width, height) => onLongPress?.({ x, y, width, height }))
+        }
+        delayLongPress={350}
+        style={({ pressed }) => [
+          s.bubble,
+          s.userBubble,
+          ur ? s.userBubbleUr : s.userBubbleEn,
+          pressed && { opacity: 0.9 },
+        ]}
+        accessibilityRole="text"
+        accessibilityLabel={text}
+        accessibilityHint={t("longPressHint", lang)}
+      >
+        <Text style={[bodyStyle(lang), { color: color.onPrimary }]}>{text}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -216,14 +302,17 @@ export function BotBubble({
   lang,
   mode,
   citations,
+  onLongPress,
 }: {
   text: string;
   lang: Language;
   mode: Mode | "quota" | "error";
   citations?: Citation[];
+  onLongPress?: (anchor: MenuAnchor) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ur = isUr(lang);
+  const ref = useRef<View>(null);
 
   // ── A refusal and an outage must not look the same ─────────────────────
   //
@@ -243,20 +332,32 @@ export function BotBubble({
   return (
     <View style={[s.row, ur ? { justifyContent: "flex-end" } : { justifyContent: "flex-start" }]}>
       <View style={{ maxWidth: "88%" }}>
-        <View
-          style={[
+        {/* Long-pressable as well as carrying a persistent icon: someone who
+            long-presses an answer expecting a menu should not find nothing.
+            ChatGPT and Gemini both offer the button AND the gesture. */}
+        <Pressable
+          ref={ref}
+          onLongPress={() =>
+            ref.current?.measureInWindow((x, y, width, height) => onLongPress?.({ x, y, width, height }))
+          }
+          delayLongPress={350}
+          style={({ pressed }) => [
             s.bubble,
             s.botBubble,
             ur ? s.botBubbleUr : s.botBubbleEn,
             isRefusal && (ur ? s.markedUr : s.markedEn),
             isSystem && s.systemBubble,
+            pressed && { opacity: 0.95 },
           ]}
+          accessibilityRole="text"
+          accessibilityLabel={text}
+          accessibilityHint={t("longPressHint", lang)}
         >
           {isSystem && (
             <Text style={[metaStyle(lang), s.systemLabel]}>{t("systemNotice", lang)}</Text>
           )}
           <Text style={bodyStyle(lang)}>{text}</Text>
-        </View>
+        </Pressable>
 
         <View style={[s.actions, ur && { flexDirection: "row-reverse" }]}>
           {citations && citations.length > 0 && (
@@ -280,7 +381,7 @@ export function BotBubble({
               </Text>
             </Pressable>
           )}
-          <CopyButton value={answerForClipboard(text, citations, lang)} lang={lang} />
+          <CopyIconButton value={answerForClipboard(text, citations, lang)} lang={lang} />
         </View>
 
         {citations && citations.length > 0 && (
@@ -481,6 +582,30 @@ const s = StyleSheet.create({
     borderColor: color.primary,
   },
   chipText: { ...type.chip, color: color.primary },
+  iconAction: {
+    // 48dp target, 17px glyph — visually lighter, not physically smaller.
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editBubble: {
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.primary,
+    borderRadius: radius.bubble,
+    width: "100%",
+  },
+  editInput: { minHeight: 44, maxHeight: 160, padding: 0, color: color.text },
+  sendChip: {
+    minHeight: 36,
+    justifyContent: "center",
+    paddingHorizontal: space.lg,
+    borderRadius: radius.chip,
+    backgroundColor: color.primary,
+  },
+  sendChipText: { ...type.chip, color: color.onPrimary },
   copyChip: {
     minHeight: 36,
     justifyContent: "center",

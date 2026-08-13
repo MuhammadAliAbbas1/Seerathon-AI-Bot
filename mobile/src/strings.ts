@@ -61,6 +61,16 @@ export const UI: Record<string, L> = {
    * escaping through the one door validation does not watch.
    */
   copiedSources: { en: "Sources:", ur: "حوالہ جات:" },
+
+  // ── Message actions ────────────────────────────────────────────────────
+  // Every icon-only control is labelled in both languages: an unlabelled
+  // icon is invisible to a screen reader, and §7.1 requires the whole shell
+  // localized, not just the answer path.
+  copyAnswer: { en: "Copy answer with sources", ur: "جواب بمع حوالہ جات نقل کریں" },
+  edit: { en: "Edit", ur: "ترمیم کریں" },
+  editMessage: { en: "Edit your message", ur: "اپنے پیغام میں ترمیم کریں" },
+  cancel: { en: "Cancel", ur: "منسوخ کریں" },
+  longPressHint: { en: "Long press for options", ur: "اختیارات کے لیے دیر تک دبائیں" },
   shamail: { en: "Shamail", ur: "شمائل" },
   timeline: { en: "Seerah timeline", ur: "سیرت ٹائم لائن" },
 };

@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "ur",
+    "question": "حضور ﷺ دائیں ہاتھ سے کھاتے تھے، تو ہمارے لیے اس کا کیا مطلب ہے؟",
+    "recordedAt": "2026-08-13T20:37:12.287Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "ruling_seeking",
+      "candidateIds": []
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"ruling_seeking\",\n  \"candidateIds\": []\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 14001,
+        "candidatesTokenCount": 21,
+        "totalTokenCount": 14022,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 14001
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "9ip-aoSRK-2cnsEPyZ6IqQw"
+    }
+  }
+}

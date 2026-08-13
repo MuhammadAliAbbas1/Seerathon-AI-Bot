@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "ur",
+    "question": "huzoor dayen haath se khate the, hamare liye is ka kya matlab hai",
+    "recordedAt": "2026-08-13T20:37:28.191Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "ruling_seeking",
+      "candidateIds": []
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"ruling_seeking\",\n  \"candidateIds\": []\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 14001,
+        "candidatesTokenCount": 21,
+        "totalTokenCount": 14022,
+        "cachedContentTokenCount": 13063,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 14001
+          }
+        ],
+        "cacheTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13063
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "Bit-ar-FGKO0nsEPi6qrmAo"
+    }
+  }
+}
