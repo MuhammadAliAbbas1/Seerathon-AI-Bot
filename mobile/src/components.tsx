@@ -34,9 +34,8 @@ export function Header({
             segmented pill §12.1 described from a smaller screenshot. Matched
             to the real control: labels flanking a track, the knob sliding to
             the active side, active label in primary green.
-            ⚠️ Which side the reference's knob sits on could not be resolved
-            from the screenshot, so this uses the unambiguous convention —
-            knob toward the language that is ON. */}
+            Knob direction VERIFIED against the reference on device
+            2026-08-13: knob sits on the UR side when UR is active. */}
         <Pressable
           onPress={onToggleLang}
           style={s.toggle}

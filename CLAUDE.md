@@ -740,7 +740,7 @@ Every row states **what "complete" means**, so partial progress cannot quietly r
 | **2 — Guardrail router** | ✅ | 3-way classification, keyword ratchet, precedence, fail-closed — verified live in **both** languages | — |
 | **3 — Answer path + §5.3** | ✅ | All three citation checks enforced in code, so a hallucinated or hollow citation cannot reach the screen — verified live | — |
 | **3.5 — Deploy backend** | ✅ | Stable public URL, all four rubric behaviours verified **through the deployment** | — (`seerathon-api.vercel.app`, §5.7) |
-| **4 — Chat UI** | 🟡 **in progress** | Source cards, persistent disclaimer, and the whole surface **usable on a real device by someone who has never seen it** | Keyboard covered the composer (Android edge-to-edge); no safe-area handling; touch targets under 48dp; no route back to the example chips; five sources stack into a wall |
+| **4 — Chat UI** | 🟡 **in progress** | Source cards, persistent disclaimer, and the whole surface **usable on a real device by someone who has never seen it** | ✅ verified on device: 48dp targets, switch knob direction, three header controls fit without truncation, Urdu `lineHeight` (§12.0). ✅ built: sources sheet. ❌ **keyboard still covers part of the composer** — see §12.5. Not yet observed: error styling, scroll landing, sheet paging under RTL |
 | **5 — Urdu** | 🟡 **substantially done** | Bilingual end to end — detection, selection, answers, citations **and the whole shell** — with RTL correct on hardware | Native-speaker register review (owner: **the human**, not the agent). RTL of the new UI surfaces unverified on device |
 | **6 — Adversarial hardening** | 🟡 **partial** | `tests/adversarial.md` run **as one suite** before every router/prompt commit, every 🔴 case genuinely tested | 49 cases documented, offline groups C/D pass, live groups verified piecemeal. Never run end to end as a single suite |
 | **7 — Deploy + demo rehearsal** | 🟡 **half** | Deployed **and rehearsed** — the demo run start to finish on the real APK against the real backend | Deploy done. **Rehearsal never done.** `demo-cache.json` (§5.6) not built |
@@ -814,7 +814,11 @@ Settled by installing the Phase 1(c) APK on real hardware. **Do not bundle a fon
 - ✅ **RTL is correct** — Urdu titles right-aligned, multi-line Urdu stacks right, and the mixed-direction case renders `(صحیح بخاری حدیث 3560)` with `3560` intact and correctly positioned. That was the case most likely to break, and it doesn't.
 - ❌ **No bundled font needed.** This removes ~200–500 KB from the APK and closes the §7.1 font risk. Revisit only if a future device shows otherwise.
 
-**One cosmetic item for Phase 4:** the ﷺ ligature is tall enough to crowd the line above it in Urdu body text. Fix with `lineHeight` on Urdu text styles — it is a spacing adjustment, not a font problem. §12.1 already calls for ~1.7 line height on Urdu; treat that as a floor, not a target.
+**~~One cosmetic item for Phase 4~~ — RESOLVED AND VERIFIED ON HARDWARE, 2026-08-13.**
+
+The ﷺ ligature is tall enough to crowd the line above it in Urdu body text. Fixed with `lineHeight: 38` against `fontSize: 19` (≈2.0×) on `type.bodyUr`. **Checked on device against real Urdu answers, not against a render harness: the ligature sits cleanly inside flowing text with no collision, and 38 does *not* read as airy.**
+
+🚫 **Do not retune this.** A prediction that 38 would look too generous was wrong, and the reason is now understood: **the same crowding is visible in the reference app itself** (screens 2 and 3, where ﷺ wraps onto its own line — see §12.4). The glyph is tall by nature, so generous leading is the correct treatment rather than an overcorrection. §12.1's ~1.7 remains a floor; 2.0 is the verified value for body text.
 
 ### 12.1 What the reference actually looks like
 
@@ -888,4 +892,22 @@ Two corrections to §12.1:
 
 **No modal or bottom sheet exists anywhere in the reference.** The sheet container is therefore genuinely new, assembled from their card, header-button and ordinal vocabulary. Anything else with no analogue — a toast, a tooltip, a confirm dialog — is in the same position: derive it from their primitives, and say plainly that it is new rather than pretending it was matched.
 
-⚠️ **The ﷺ ligature crowds lines in the reference app too** (visible in screens 2 and 3, where it wraps onto its own line). So the crowding is inherent to the glyph, not a bug in our styling — `lineHeight` mitigates it and will not eliminate it. Do not chase a perfect fix.
+⚠️ **The ﷺ ligature crowds lines in the reference app too** (visible in screens 2 and 3, where it wraps onto its own line). So the crowding is inherent to the glyph, not a bug in our styling — `lineHeight` mitigates it and will not eliminate it. Do not chase a perfect fix. **Our `lineHeight: 38` is verified correct on hardware (§12.0) — do not retune it.**
+
+### 12.5 The Android keyboard, and why the obvious fix is not available
+
+**Symptom, on device 2026-08-13:** with the keyboard open the composer is cut roughly in half at the keyboard's top edge — its top visible, its bottom behind the keyboard.
+
+**The layout is not the bug.** The root is `flex: 1` at full window height; a spacer of the measured keyboard height at the bottom pushes the composer up by exactly that much, so its bottom edge lands at `screenBottom − measured`. That is correct **if and only if** `measured` is the keyboard's real height. The layout responded, so the arithmetic is sound and the *input* to it is wrong.
+
+**Why the input is wrong, and why this is not a constant to tune:**
+
+- Expo's edge-to-edge guidance states the mode "changes how Android handles keyboards. Like on iOS, you'll need to use `KeyboardAvoidingView` or — ideally — `react-native-keyboard-controller`." **The window no longer resizes**, so nothing in the OS compensates.
+- RN's JS keyboard events have a long-standing Android accuracy bug (facebook/react-native#30191). Under edge-to-edge, `endCoordinates.height` has **no well-defined reference frame** — it may or may not include the navigation-bar inset, and may be measured before a keyboard toolbar strip renders.
+- The observed shortfall is most consistent with the navigation-bar inset being excluded (gesture nav ≈ 24–48dp against a ~72dp composer). **But that is an inference, not a measurement**, and any fix derived from it is empirical: it would be a correction term that happens to work on one phone.
+
+⚠️ **`softwareKeyboardLayoutMode: "resize"` is NOT the escape hatch.** It maps to `windowSoftInputMode`, which edge-to-edge neutralises — the window does not resize regardless of the value.
+
+⚠️ **Disabling edge-to-edge is a dead end.** It can be turned off on Android 15 and below, but **Android 16 removed the opt-out**, so it would work today and break on exactly the device a judge might be carrying.
+
+**Conclusion: stop measuring the keyboard from JS.** `react-native-keyboard-controller` reads `WindowInsets.ime` natively — the OS's own authority on where the keyboard is — so there is no reference frame left to get wrong. This is Expo's own recommendation for edge-to-edge, and it is the difference between a fix that is correct by construction and one that is correct on one device.
