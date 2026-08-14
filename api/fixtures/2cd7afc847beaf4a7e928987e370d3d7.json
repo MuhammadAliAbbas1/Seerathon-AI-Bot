@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "en",
+    "question": "What is covered in the Ghazwa Badr course?",
+    "recordedAt": "2026-08-14T19:18:49.724Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "in_corpus",
+      "candidateIds": [
+        "672e189ce8c7280020a73b59"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"672e189ce8c7280020a73b59\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13992,
+        "candidatesTokenCount": 50,
+        "totalTokenCount": 14042,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13992
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "Fmp_atOlMbi-vdIPjNez8QM"
+    }
+  }
+}

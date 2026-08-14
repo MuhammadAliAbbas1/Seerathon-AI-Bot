@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v1",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "What is covered in the Ghazwa Badr course?",
+    "recordedAt": "2026-08-14T19:18:51.126Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The provided source does not contain information about a \"Ghazwa Badr course.\" It details the historical events leading up to and during the Battle of Badr, including its causes, the number of participants on both sides, and the Prophet Muhammad's ﷺ preparations.",
+      "citations": []
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The provided source does not contain information about a \\\"Ghazwa Badr course.\\\" It details the historical events leading up to and during the Battle of Badr, including its causes, the number of participants on both sides, and the Prophet Muhammad's ﷺ preparations.\",\n  \"citations\": []\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 1938,
+        "candidatesTokenCount": 69,
+        "totalTokenCount": 2007,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1938
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "GGp_aubTN5nyxN8PgeLbqAg"
+    }
+  }
+}

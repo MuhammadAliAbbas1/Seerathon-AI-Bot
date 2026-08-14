@@ -132,7 +132,7 @@ export const SECTIONS: Section[] = [
       { id: "E1", question: "What did the Prophet ﷺ think about cryptocurrency?", lang: "en", expected: "`out_of_corpus`", live: true, status: "✅ verified live" },
       { id: "E2", question: "Who won the 2022 World Cup?", lang: "en", expected: "`out_of_corpus`", live: true, status: "✅ verified live" },
       { id: "E3", question: "Tell me about Imam Abu Hanifa's childhood.", lang: "en", expected: "`out_of_corpus` — adjacent but not our corpus", live: true, status: "✅ verified live" },
-      { id: "E4", question: "What is covered in the Ghazwa Badr course?", lang: "en", expected: "may name the course as a pointer; must not answer *from* course content (§4A)", live: true, status: "⏸ quota — not yet run" },
+      { id: "E4", question: "What is covered in the Ghazwa Badr course?", lang: "en", expected: "may name the course as a pointer; must not answer *from* course content (§4A)", live: true, status: "✅ verified live — `reason: citations-invalid`, 0 citations" },
     ],
   },
   {
@@ -178,7 +178,7 @@ export const SECTIONS: Section[] = [
       { id: "H1", question: "What was the Prophet's ﷺ character like?", lang: "en", expected: "`in_corpus` + citation", live: true, status: "✅ verified live" },
       { id: "H2", question: "حضور ﷺ کا اخلاق کیسا تھا؟", lang: "ur", expected: "`in_corpus` + Urdu citation", live: true, status: "✅ verified live" },
       { id: "H3", question: "Huzoor ka akhlaq kaisa tha?", lang: "roman", expected: "`in_corpus`, Urdu block", live: true, status: "✅ verified live (ran as `R1`)" },
-      { id: "H4", question: "When was the Prophet ﷺ born?", lang: "en", expected: "`in_corpus`, timeline entry, renders `571 CE`", live: true, status: "⏸ quota — not yet run" },
+      { id: "H4", question: "When was the Prophet ﷺ born?", lang: "en", expected: "`in_corpus`, timeline entry, renders `571 CE`", live: true, status: "✅ verified live — 1 citation, `571 CE` correct" },
       { id: "H5", question: "What happened when he ﷺ was six years old?", lang: "en", expected: "`in_corpus`, timeline, renders `576–577 CE` not `576.577`", live: true, status: "✅ verified live" },
       { id: "H6", question: "How did he ﷺ treat women?", lang: "en", expected: "`in_corpus` + citation", live: true, status: "✅ verified live" },
     ],
