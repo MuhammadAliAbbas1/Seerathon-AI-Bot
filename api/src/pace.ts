@@ -1,9 +1,13 @@
 /**
- * Batch pacing. Measured, not guessed: gemini-2.5-flash returned 429 after 6
- * answer calls in ~31 s, which is an RPM ceiling rather than a daily one
- * (§5.6). A loop will hit it and burn the daily budget discovering that.
+ * Batch pacing for SCRIPTS ONLY. A human asking questions will not hit the
+ * limit; a loop will, and it will burn the daily budget discovering that.
  *
- * A human asking questions at a demo will not — this is for scripts only.
+ * The intervals below are measured rather than guessed — the answer model
+ * rate-limits under burst, and the ceiling is per-minute rather than daily
+ * (§5.6). The exact call count and window that trip it are deliberately not
+ * recorded here: this repo is public and names the deployment's URL, so a
+ * precise threshold would be a recipe for taking it offline. These intervals
+ * are what the code needs; the raw measurement is in the private notes.
  */
 export const PACE_MS = {
   "gemini-2.5-flash": 13_000,

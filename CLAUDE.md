@@ -1,5 +1,11 @@
 # CLAUDE.md — Seerathon: Seerah Q&A Bot
 
+> **What this file is.** A working context document, written as instructions *to a coding agent* rather than as documentation for a reader. That is why it says "you must", "do not", and marks things 🚫 and ⚠️ — it is one side of a conversation, not a manual. It is checked in because it is where the *reasoning* lives: what was tried, what broke, and why each decision went the way it did. Losing the code would cost less than losing this.
+>
+> It is kept honest rather than tidy. Mistakes are recorded with their causes, superseded conclusions are struck through rather than deleted, and several sections exist only because something went wrong once. If it reads oddly candid, that is deliberate — a decision recorded without its *why* cannot be noticed going stale.
+>
+> Some operational specifics were removed before this repo became public; each removal says so where it happened.
+
 Read this file at the start of every session before doing anything else.
 
 > ## ⚠️ How to edit THIS file
@@ -300,7 +306,7 @@ Citations carry their text so the app renders a source card with no second reque
 - Nothing sensitive in `app.config.js` / `eas.json` — Expo's `extra` block ships in the bundle
 - Only the backend URL may use the `EXPO_PUBLIC_` prefix. Nothing else, ever.
 
-**Abuse mitigation** (the endpoint is public and unauthenticated by design): IP rate limiting on the route, plus a spend cap set in the Google Cloud console. **Set the cap before the repo goes public** — the backend URL will be in it. On free tier the quota itself is the cap.
+**Abuse mitigation** (the endpoint is public and unauthenticated by design): IP rate limiting on the route, plus a spend cap in the Google Cloud console **if billing is ever enabled**. On free tier the provider's quota is itself the cap, so the worst case is typed 503s rather than a bill.
 
 ### 5.5 Ruling detection
 
@@ -360,12 +366,14 @@ The failure was honest throughout: the deployment translated Gemini's 429 into t
 
 **To measure:** read the **`Gemini 2.5 Flash`** and **`Gemini 2.5 Flash-Lite`** rows in AI Studio for project `268175794480` and record RPM / TPM / RPD for each. Known spend against this project so far: **1 request to `gemini-2.5-flash`, 6 to `gemini-2.5-flash-lite`**, plus one `GET /models` — if the two models' daily counters differ by that split, RPD is per-model; if a single aggregate moved by 7, it is project-wide.
 
-⚠️ **RPM on the answering model is a DEMO risk, not just a batch-runner problem.** Measured: `gemini-2.5-flash` returned 429 after **6 answer calls in ~31 seconds**. That is an RPM ceiling, and **five questions a minute is a rate a judge can reach with rapid follow-ups** — so `quota_exhausted` is a string that may genuinely be read on stage.
+⚠️ **RPM on the answering model is a DEMO risk, not just a batch-runner problem.** Measured: **the answer model rate-limits quickly under burst** — at a rate a judge can reach with rapid follow-ups, not merely one a script can reach. So `quota_exhausted` is a string that may genuinely be read during judging.
+
+> 🔒 **The exact call count and window that trip it were removed before this repo went public.** They are a precise recipe for taking the deployment down, printed next to its URL, in a document a judge will read. The failure mode is what decides it: someone testing whether the limit is real takes the bot offline for the next person. The lesson survives without the numbers — **burst is the binding constraint, pace anything automated, and treat `quota_exhausted` as a string that will be seen.** The measured figures are in the private working notes.
 
 Two consequences, both binding:
 
 - **The quota copy must read as graceful, not as a failure.** It is "the service is briefly at capacity", never an error code, never red. §12.2 requires the UI to render that mode as calmly as a refusal — a red alert mid-demo reads as a crash even when the system is behaving exactly as designed.
-- **Any batch runner must pace itself:** ≥13 s between calls on `gemini-2.5-flash`, ≥7 s on `gemini-2.5-flash-lite`. A human asking questions will not hit this; a loop will, and it will burn the daily budget discovering that.
+- **Any batch runner must pace itself.** The per-model intervals live in `api/src/pace.ts` and are the only place they should live. A human asking questions will not hit the limit; a loop will, and it will burn the daily budget discovering that.
 
 **Measured 2026-08-12, from a real 9-request batch** (fixtures in `api/fixtures/` carry the `usageMetadata`):
 
@@ -623,7 +631,7 @@ Region is pinned to **`bom1`** because the default `iad1` (US East) crosses two 
 
 #### Rate limiting (§5.4 abuse mitigation)
 
-**10/min and 100/day per IP, plus a 500/day global backstop.** The global counter is the part that still holds when traffic is spread across addresses; the per-IP limit cannot.
+**A per-IP minute and day limit, plus a global daily backstop.** The thresholds are constants at the top of `api/src/rate-limit.ts` — one place, not repeated here. The global counter is the part that still holds when traffic is spread across addresses; the per-IP limit cannot.
 
 Stated honestly: this is an **in-process Map — per-instance, reset on cold start, not shared between concurrent instances.** It stops one person or one script hammering the endpoint and does **not** stop a distributed attacker. That is an accepted trade, not an oversight — fixing it properly means Redis/KV, a dependency and a service (§9) bought for a threat model this project does not have. **The real ceiling is the free-tier quota**, so an attacker's reward for getting past it is typed 503s, not a bill.
 
@@ -631,7 +639,7 @@ The check runs **after** body parsing, deliberately: no provider call can preced
 
 **`rate_limited` is a distinct error code from `quota_exhausted`.** Different cause — ours versus the provider's — identical calm rendering (§12.2). Conflating them would make the logs lie about which limit was hit.
 
-⚠️ **A spend cap is still not set.** On the free tier the quota is the cap (§5.4), so this is currently sound; it becomes load-bearing the moment billing is enabled.
+**On the free tier the provider's own quota is the cap** (§5.4), so an attacker's reward for defeating the limiter is typed 503s rather than a bill. A console spend cap becomes load-bearing the moment billing is enabled — check it before enabling billing, never after.
 
 #### `/api/health` — what it is allowed to tell you
 
