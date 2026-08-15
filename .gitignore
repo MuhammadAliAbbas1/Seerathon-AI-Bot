@@ -12,6 +12,16 @@ google-services.json
 GoogleService-Info.plist
 
 # ---------------------------------------------------------------------------
+# Reference material that is NOT ours to redistribute
+# ---------------------------------------------------------------------------
+# Screenshots of the organizers' live "Seerat ki Dunya" app, used as design
+# reference (CLAUDE.md §12). They stay on the maintainer's disk and out of the
+# repo: they are six full screens of someone else's product, captured from a
+# personal account with a name and avatar in the status bars, and this repo is
+# public. §12 carries the written extraction, so nothing is lost but the pixels.
+docs/design-reference/
+
+# ---------------------------------------------------------------------------
 # Node
 # ---------------------------------------------------------------------------
 node_modules/

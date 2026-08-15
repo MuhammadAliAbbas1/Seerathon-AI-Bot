@@ -33,8 +33,9 @@ import type { Citation, Language } from "./api";
  *
  * §12 has no coverage for sheets or modals — it was written before this
  * surface existed, and it has already been wrong once (it called the language
- * control a pill; it is a switch). So this was built by re-opening
- * `docs/design-reference/`:
+ * control a pill; it is a switch). So this was built by re-opening the
+ * reference images directly. Those images are gitignored and not in this repo
+ * (CLAUDE.md §12.7 says what each screen held and why they are out):
  *
  *  · `"Source 1 of 5"` copies their own ordinal idiom, `"Trait 1 of 17"`
  *    (screen3), rather than inventing a `‹ 1/5 ›` counter.

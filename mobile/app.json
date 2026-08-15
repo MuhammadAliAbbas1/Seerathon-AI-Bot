@@ -29,6 +29,17 @@
       "eas": {
         "projectId": "d09145a8-6c14-43be-bdbb-b66be37f3eb0"
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "//": "arm64 ONLY. The universal APK was 82 MB because it carried four ABIs; every modern Android phone is arm64-v8a, so the other three were dead weight in a download a judge has to accept an 'unknown source' warning for. buildArchs overrides reactNativeArchitectures in gradle.properties. COST, stated plainly: this drops pre-2015 32-bit devices (armeabi-v7a) and Android emulators on x86/x86_64 hosts - an emulator needs a build without this filter. Runtime behaviour is unchanged: the JS bundle is identical and arm64 is the slice that already executed on real hardware.",
+          "android": {
+            "buildArchs": ["arm64-v8a"]
+          }
+        }
+      ]
+    ]
   }
 }

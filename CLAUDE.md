@@ -770,19 +770,20 @@ Every row states **what "complete" means**, so partial progress cannot quietly r
 | **2 — Guardrail router** | ✅ | 3-way classification, keyword ratchet, precedence, fail-closed — verified live in **both** languages | — |
 | **3 — Answer path + §5.3** | ✅ | All three citation checks enforced in code, so a hallucinated or hollow citation cannot reach the screen — verified live | — |
 | **3.5 — Deploy backend** | ✅ | Stable public URL, all four rubric behaviours verified **through the deployment** | — (`seerathon-api.vercel.app`, §5.7) |
-| **4 — Chat UI** | 🟡 **in progress** | Source cards, persistent disclaimer, and the whole surface **usable on a real device by someone who has never seen it** | ✅ verified on device: 48dp targets, switch knob direction, three header controls fit without truncation, Urdu `lineHeight` (§12.0). ✅ built: sources sheet. ❌ **keyboard still covers part of the composer** — see §12.5. Not yet observed: error styling, scroll landing, sheet paging under RTL |
-| **5 — Urdu** | 🟡 **substantially done** | Bilingual end to end — detection, selection, answers, citations **and the whole shell** — with RTL correct on hardware | Native-speaker register review (owner: **the human**, not the agent). RTL of the new UI surfaces unverified on device |
-| **6 — Adversarial hardening** | 🟡 **partial** | `tests/adversarial.md` run **as one suite** before every router/prompt commit, every 🔴 case genuinely tested | 49 cases documented, offline groups C/D pass, live groups verified piecemeal. Never run end to end as a single suite |
-| **7 — Deploy + demo rehearsal** | 🟡 **half** | Deployed **and rehearsed** — the demo run start to finish on the real APK against the real backend | Deploy done. **Rehearsal never done.** `demo-cache.json` (§5.6) not built |
+| **4 — Chat UI** | 🟢 **effectively done** | Source cards, persistent disclaimer, and the whole surface **usable on a real device by someone who has never seen it** | ✅ on device: 48dp targets, switch knob direction, header fits, Urdu `lineHeight` (§12.0), **keyboard fixed** via `react-native-keyboard-controller` (§12.5) — all five checks passed. ✅ built: sources sheet, edit-and-resend, copy, new chat, landing screen (§12.6). Not yet observed on device: the §12.6 landing screen itself, error styling, sheet paging under RTL |
+| **5 — Urdu** | 🟡 **substantially done** | Bilingual end to end — detection, selection, answers, citations **and the whole shell** — with RTL correct on hardware | **Native-speaker register review (owner: the human, not the agent)** — including the open `معذرت`/`انکار` call flagged in `strings.ts`. RTL of the newest surfaces unverified on device |
+| **6 — Adversarial hardening** | 🟢 **done, with one case unconstructible** | `tests/adversarial.md` run **as one suite** before every router/prompt commit, every 🔴 case genuinely tested | 60 cases from a single source of truth (`tests/cases.ts`), document generated and drift-checked. 36 executable, **all covered by real fixtures**. G6 is unconstructible against corpus 1.0.0 — 0 of 154 entries have asymmetric language coverage — and is recorded as such, not skipped |
+| **7 — Deploy + demo rehearsal** | 🟡 **half** | Deployed **and rehearsed** — the demo run start to finish on the real APK against the real backend | Deploy done. **Rehearsal never done — the largest remaining risk.** `demo-cache.json` (§5.6) not built |
+| **8 — Submission** | 🟡 **in progress** | Repo public with a README, APK linked, screenshots and description uploaded | Judging is unattended (§12.6). Repo still **private and unpushed**; README written; reference images removed from git; arm64-only APK not yet rebuilt or smoke-tested |
 | **Stretch — WhatsApp** | ⬜ | A second surface on the same core | Not started. Strictly a bonus, never at the cost of the primary surface (§6) |
 
 **Priority of what remains, highest first:**
 
-1. **Phase 4** — the APK *is* the submission artifact; judges install and run it.
+1. **Phase 8 submission** — unattended judging means the repo, the README and the description *are* the pitch (§12.6). Nothing else matters if a judge never installs.
 2. **Phase 7 rehearsal** — never done, and it is where unknown-unknowns surface.
-3. **`demo-cache.json`** — quota insurance for judging day (§5.6). No longer a latency crutch (§5.9).
-4. **Urdu register review** — blocked on human judgement, not on code.
-5. **Phase 6 as a suite** — largely covered piecemeal; the gap is running it *as* a suite.
+3. **arm64 APK rebuild + smoke test** — the universal build was 82 MB, which is real install friction; `buildArchs` cuts it, and a packaging change needs one install-and-launch check.
+4. **`demo-cache.json`** — quota insurance for judging day (§5.6). No longer a latency crutch (§5.9).
+5. **Urdu register review** — blocked on human judgement, not on code.
 
 ---
 
@@ -826,15 +827,23 @@ Run against the live Gemini API on project `268175794480`. Full detail in §5.6.
 
 ## 12. Design language — from the real app
 
-Reference screenshots in `docs/design-reference/` (the live **Seerat Ki Duniya** app — the Seerah app our widget is meant to live inside). Extracted 2026-08-12. **This section governs Phase 4. It is documentation, not a licence to start building UI.**
+Extracted 2026-08-12 from screenshots of the live **Seerat Ki Duniya** app — the Seerah app our widget is meant to live inside. **This section governs Phase 4. It is documentation, not a licence to start building UI.**
 
-> ⚠️ **This section is a SUMMARY of the screenshots, not the screenshots. Re-open the images before building a surface; do not trust the prose here.**
+> ## ⚠️ The reference images are NOT in this repo — deliberately
 >
-> It was extracted in one pass and has already been wrong once. §12.1 described the language control as a *segmented pill*; the reference actually uses a **switch** — `UR ●— EN`, labels flanking a track with a sliding knob. That shipped as a pill, at 24dp, on a §7.1 rubric control, until someone looked at the screenshot again while building something else.
+> They are six full screens of the organizers' own product, captured from a personal account with a name and avatar visible in the status bars. This repo is public and the organizers are the judges, so they are gitignored (`docs/design-reference/`) and live only on the maintainer's disk.
 >
-> The failure mode is specific and worth naming: **a summary written from an image is lossy in ways the summary itself cannot record.** It reads as authoritative precisely because it is confident and specific. Anything it got wrong will stay wrong for as long as people read the prose instead of the picture.
+> **The consequence for you: this prose is now the only extraction there is, inside the repo.** That raises the stakes on the warning below rather than retiring it.
 >
-> So, when building any surface: **open the relevant screenshot in `docs/design-reference/` first, and correct this section wherever it disagrees.** Surfaces that did not exist when §12 was written — the sources sheet, copy affordances, any modal — have *no* coverage here at all and must be derived from the images directly.
+> ⚠️ **This section is a SUMMARY, and a summary written from an image is lossy in ways the summary itself cannot record.** It reads as authoritative precisely because it is confident and specific.
+>
+> It has already been wrong once. §12.1 described the language control as a *segmented pill*; the reference actually uses a **switch** — `UR ●— EN`, labels flanking a track with a sliding knob. That shipped as a pill, at 24dp, on a §7.1 rubric control, until someone looked at the screenshot again while building something else.
+>
+> **If you have the images** (maintainer): open the relevant one before building a surface and correct this section wherever it disagrees. Surfaces that did not exist when §12 was written — the sources sheet, copy affordances, any modal — have *no* coverage here and must be derived from the images directly.
+>
+> **If you do not have the images** (anyone reading the public repo): treat every visual claim here as reported rather than verified, and do not add new claims about the reference. Extending a lossy summary from memory is how the pill happened.
+>
+> Screens are cited below as `screen1`–`screen6` and `logo`; the mapping is in §12.7 so the citations still mean something without the files.
 
 ### 12.0 Font and RTL — VERIFIED ON DEVICE, 2026-08-12
 
@@ -871,7 +880,7 @@ The ﷺ ligature is tall enough to crowd the line above it in Urdu body text. Fi
 
 Note the split: the **logo** is teal + gold, but the **UI** is green + gold. Follow the UI. Teal appears nowhere in the product chrome.
 
-⚠️ **Correction, 2026-08-13 — the language control is a SWITCH, not a pill.** Re-read from `screen1.jpeg` while building the header: `UR` and `EN` labels flank a white rounded track containing a solid green knob, with the active label in primary green and the inactive in `textSoft`. It is not two halves of a segmented pill. Built as a switch; the knob slides toward the language that is ON, which is the unambiguous convention — **the screenshot could not settle which side the reference puts it on, and that remains unverified.**
+⚠️ **Correction, 2026-08-13 — the language control is a SWITCH, not a pill.** Re-read from `screen1` while building the header: `UR` and `EN` labels flank a white rounded track containing a solid green knob, with the active label in primary green and the inactive in `textSoft`. It is not two halves of a segmented pill. Built as a switch; the knob slides toward the language that is ON, which is the unambiguous convention — **the screenshot could not settle which side the reference puts it on, and that remains unverified.**
 
 **Typography.** English is a rounded geometric sans with double-storey `a` and soft terminals (Nunito/Quicksand family — match the characteristics, don't chase the exact licence). Screen titles ~23px bold; card titles ~18px semibold; body ~15–16px regular at ~1.55 line height; meta ~13px in secondary grey; stat numbers ~30px bold in primary green. Urdu is naskh, noticeably larger than the English at the same rank (Urdu needs ~1.15–1.25× the size and ~1.7 line height to stay legible), and `ﷺ` renders as a true calligraphic ligature — **their app does render U+FDFA**, which is a useful signal for our Phase 1(c) font check. English and Urdu are never mixed mid-sentence in chrome; the app switches wholesale via a **`UR / EN` pill toggle in the header**, which is the pattern we should copy for §7.1.
 
@@ -905,7 +914,7 @@ Smaller conflicts to expect: the reference uses orange for its one high-emphasis
 
 ### 12.4 Patterns found on a second pass — added 2026-08-13
 
-Extracted while building the sources sheet, by re-opening the images rather than trusting the prose above. Recorded so the next surface does not re-derive them.
+Extracted while building the sources sheet, by re-opening the images rather than trusting the prose above. Recorded so the next surface does not re-derive them — and, now that the images are out of the repo (§12.7), this table is the record.
 
 | Pattern | Where | What it is |
 |---|---|---|
@@ -1004,3 +1013,19 @@ Chip 4 exposed a rendering bug that was always there: the user's own echoed mess
 ⚠️ The character class is literal UTF-8, and **a broken class fails OPEN** — everything renders LTR, silently, invisible until someone looks at a device. `shell:check` reads the line back out of `theme.ts` and asserts six cases; the guard was itself verified by deliberately dropping the presentation-forms range and watching it fail.
 
 **`scripts/shell-check.mjs` exists because `mobile/` is unreachable by both the typechecker and the test runner** — the API tsconfig excludes it and the runner globs `api/tests/*.test.ts`. Importing a mobile module from a test was tried and reverted: `module: nodenext` takes module kind from the nearest `package.json`, and adding `"type": "module"` to `mobile/package.json` to satisfy a test would change how Metro resolves the app. So these invariants are checked from outside, by reading the files as text.
+
+### 12.7 What each reference screen was — added 2026-08-15
+
+The images are gitignored (see the header block). This is the index that keeps the `screen1`–`screen6` citations above meaningful without them, and it is the *only* record inside the repo of what was looked at.
+
+| File | Screen | What it contained that this section cites |
+|---|---|---|
+| `logo` | App mark | Gold dome-and-finial silhouette enclosing **teal** Urdu calligraphy. The source of §12.1's logo/UI colour split — the mark is teal + gold, the product chrome is green + gold |
+| `screen1` | Home | Header: avatar, name, **`UR ●— EN` switch**, circular icon button. Dark "More Events Coming Soon / View History" bar; "Send Durood Today · 3.9M+ recited worldwide" hero with a white "Read now" pill. An "AI Seerathon" card with **six role chips** wrapped over three lines (the selected one carries a green border), two stat cards, and the single orange "See Details" CTA. Six-item bottom tab bar |
+| `screen2` | Seerah ﷺ at a glance | Timeline. Tinted column-header row (`Age / Seerah / Gregorian Year`), **full-bleed tinted section bands**, **numbered badges on a vertical hairline rail**, year at the trailing edge. Renders `576.577` raw — their data bug, not inherited (§12.3). ﷺ wraps onto its own line |
+| `screen3` | Shamail e Mustafa ﷺ | The **"Continue reading" hero**: deep-green card, gold Continue button, `Moral Qualities of the Beloved Prophet ﷺ · Trait 1 of 17`, two-line truncated description, hairline progress bar. Three stat cards with a **solid** hairline (0 Day streak, 0/120 Traits read, 0% Complete). Category rows: `0 of 17 · 0 read`. **A genuine empty state carrying no explanatory copy** (§12.6) |
+| `screen4` | Role Model | **Accordions** — deep-green header bar, white bold text, `▼`/`▲` chevron; expanded content is white cards on a tint *warmer* than the page |
+| `screen5` | Seerah Courses | Course cards **on a tinted ground**: banner, title, heart, meta row `20 Lessons \| 679 Enrolled Students`, "Start Learning for Free" beside a solid green "Enroll now" |
+| `screen6` | Profile | Back arrow, title, two circular icon buttons. **Dashed-border cards** — the profile-screen tic that §12.4 warns is *not* the app's default treatment. Entirely zeroed (`0 Courses / 0 Rank / Bronze League`, `0 Day Streak`, `0 Total XPs`, `Current Course: –`), and again **no explanatory copy** |
+
+⚠️ **Do not reconstruct the images from this table.** It records what was cited, not what was there — it is a summary of a summary, and the pill mistake happened one level up from here.

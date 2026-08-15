@@ -8,14 +8,16 @@ I made these decisions, so treat the defensive passages with suspicion and the c
 
 ## 1. What we are actually running
 
-**Not what Decision 1 said.** That decision recommended *Hono on Vercel*. We have neither. What exists today is:
+**Not what Decision 1 said.** That decision recommended *Hono on Vercel*. We have the Vercel half and not the Hono half. What exists today is:
 
 - **Runtime:** Node 24, running `.ts` files directly via native type-stripping. No compile step, no bundler, no transpiler.
-- **Framework:** **none.** Zero dependencies — `package.json` has an empty `dependencies` and an empty `devDependencies`.
+- **Framework:** **none.** **Zero runtime dependencies** — `package.json` has an empty `dependencies`. The only devDependencies are `typescript` (pinned to 5.9.3) and `@types/node`, both for checking, neither shipped.
 - **HTTP layer:** `api/src/http.ts` exports one pure function, `handleAsk(body, provider) → { status, body }`. It knows nothing about HTTP transport; it takes a parsed body and returns a status and a serialisable object.
 - **Dev server:** `api/scripts/dev-server.ts`, about 120 lines of `node:http`, wrapping that function. Defaults to fixtures so development spends no quota.
 - **Tests:** `node --test`, built in.
-- **Deployment:** **has not happened.** No `vercel.json`, no `.vercel`, no handler shim. Phase 3.5 is still ahead of us.
+- **Deployment:** **live at `https://seerathon-api.vercel.app`**, region `bom1`. A captured root `server.ts` — about 110 lines of `node:http` around the same `handleAsk()` the dev server uses. No adapter, no shim, and runtime dependencies still zero.
+
+> ⚠️ **Amended 2026-08-12.** This list previously read *"Deployment: has not happened… Phase 3.5 is still ahead of us"*, and §5.3 below described the production HTTP layer as hypothetical. Both were true when written and are not now. They are corrected in place rather than left to the changelog, because §1 is the first thing anyone reads and a reader who stops here should not leave with a false picture.
 
 ### When and why it changed
 
@@ -118,7 +120,7 @@ So: the strongest case for Python is that it is the conventional choice for AI w
 
 **Bun.** Fast, native TS, good DX. Same admission — unfamiliar runtime, unknown behaviour on Vercel, avoided under time pressure. Taste and risk aversion, not evidence.
 
-**Plain serverless functions.** This is very nearly what we built. `handleAsk()` *is* a serverless handler that has not met its platform yet. The distinction is mostly that we have not chosen the platform.
+**Plain serverless functions.** This is very nearly what we built, and since the deploy it is simply what we built. `handleAsk()` *is* a serverless handler; Vercel captures a root `server.ts` that wraps it. ~~The distinction is mostly that we have not chosen the platform.~~ — there is no distinction left.
 
 ---
 
@@ -148,11 +150,13 @@ Verified by deliberately adding a bogus fourth mode to the app copy and confirmi
 
 **The general lesson, which outlives this specific fix:** when a decision is accepted *because* a mitigation is promised, the mitigation is part of the decision and not a follow-up. This one was cited as the reason no-monorepo was safe, and then not built until it was pointed out.
 
-### 5.3 The dev server is not the production server
+### 5.3 The dev server is not the production server — **CLOSED 2026-08-12**
 
-`node:http` is not Vercel's runtime, not Hono's, not anything we will ship. Body parsing, streaming, timeout semantics and cold-start behaviour will all differ. Everything we have verified end to end has been verified against a server that will not exist in production.
+~~`node:http` is not Vercel's runtime, not Hono's, not anything we will ship. Body parsing, streaming, timeout semantics and cold-start behaviour will all differ. Everything we have verified end to end has been verified against a server that will not exist in production. This is the direct cost of §1's deferred decision, and it is why Phase 3.5 now carries more risk than it should.~~
 
-This is the direct cost of §1's deferred decision, and it is why Phase 3.5 now carries more risk than it should.
+**Closed, and the prediction was half right in an instructive way.** The dev server and the production server now share `handleAsk()` and differ only in their ~110-line `node:http` wrappers, so the layer itself turned out to be a non-event. But the *concern* was correct and landed somewhere else entirely: four blockers, none visible locally, each of which would have shipped a broken deployment. They are itemised in the changelog. **Deferring the deploy did not defer the risk, it concentrated it.**
+
+Two residual differences remain real, and are handled rather than eliminated: cold start (measured at 520 ms including corpus parse) and platform function duration (Hobby's default is ≥60 s, above our 45 s client abort, so the timeout ladder holds).
 
 ### 5.4 `node --test` on `.ts` files is a young path
 
