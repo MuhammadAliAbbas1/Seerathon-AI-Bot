@@ -891,7 +891,7 @@ Note the split: the **logo** is teal + gold, but the **UI** is green + gold. Fol
 | **Refusal / alim redirect** | Same white bot bubble, no red, no warning iconography. This is a courtesy, not an error — a gold left rule and a calm line of text. Treating a refusal as an error state would misrepresent three of the four rubric behaviours. |
 | **Persistent disclaimer bar** | Pinned above the composer, full-bleed, banded surface `#F0ECE1` with a hairline top border, 12px secondary text, centred, non-dismissible. Deliberately the quietest element on the screen — permanently visible without competing with content. **See the conflict below.** |
 | **About / Corpus Rules screen** | Their settings-page idiom: cream ground, sectioned white cards. The verbatim `/meta` disclaimer and all five `usage_rules`, both `en` and `ur`, reproduced exactly (§4). Reached from a circular icon button in the chat header, matching their header-button pattern. |
-| **Empty / first-run state** | Centred derived mark, one line of orientation text, and 3–4 example questions as tappable chips — one in-corpus, one out-of-corpus, one ruling-shaped. This doubles as the demo script and shows the guardrails before a judge has to think of a question. |
+| **Empty / first-run state** | Centred derived mark, one line of orientation text, and four example questions as tappable chips. This doubles as the demo script and shows the guardrails before a judge has to think of a question. **See §12.6 — the chip labels are the highest-leverage copy in the app and were wrong.** |
 
 ### 12.3 Two constraints, both binding
 
@@ -950,3 +950,57 @@ Two corrections to §12.1:
 - **Reanimated is declared explicitly in `package.json`**, not left as an auto-installed peer. Autolinking and the babel preset both depend on it being present; an undeclared dependency that the build relies on is a landmine for the next `npm install`.
 
 **Three dependencies now, all in the app and none in the backend** (the server is still at zero runtime deps): `react-native-safe-area-context`, `expo-clipboard`, `react-native-keyboard-controller`.
+
+### 12.6 The landing screen is the whole product explanation — settled 2026-08-15
+
+**Judging format is confirmed: unattended.** Submissions appear as cards in a public feed — name, description, uploaded assets, a link, upvote counts. Judges browse and try them. **No presentation, no Q&A, nobody to explain anything.**
+
+That promotes the landing screen from "empty state" to **the entire product explanation**. A judge installs the APK, opens it, and gets a title, one line of description, four chips and the disclaimer bar. Everything else is behind an interaction they have to choose to make.
+
+#### The chip labels were discouraging the taps whose only purpose was being tapped
+
+The labels read **"in the collection" / "outside it" / "a ruling question"** — describing each question's *relationship to the corpus*.
+
+Read cold, next to a question, that phrasing sounds like a warning. **Two of those three chips exist for the sole purpose of demonstrating a refusal**, and their labels steered a judge away from tapping them. A judge who tried only the first would see one cited answer and leave — with **three of the four rubric behaviours never rendered.**
+
+⚠️ **This survived every previous UI pass** because each chip was individually accurate. Nothing was wrong with any one label; the failure was in what the set of them *invited*. Accuracy is not the test for copy on a screen whose job is provoking an action — **what it invites is.**
+
+**The rule: label the OUTCOME, never the input category.** It does two jobs at once — it invites the tap, because the chip is now obviously a demo of something, and it pre-frames the refusal so that when it arrives it *confirms* the label rather than surprising.
+
+| | Was | Now |
+|---|---|---|
+| in-corpus | `in the collection` | `Answered · with its source` |
+| out-of-corpus | `outside it` | `Declined · not in the collection` |
+| ruling | `a ruling question` | `Declined · sent to a scholar` |
+
+`Declined` appears twice on purpose: two distinct refusal paths reading as a system is the point, one catch-all failure is not. `·` is the reference's own separator (`0 of 17 · 0 read`).
+
+#### Three more things the screen never said
+
+- **The body copy restated the disclaimer bar almost verbatim** — two elements a few hundred pixels apart spending the screen's scarcest resource on the same claim. It now says what the bar cannot: that declining is designed. ⚠️ **The count `154` in it is load-bearing copy, not decoration** — "approved collection" is vague and reads as marketing, while a concrete checkable number supplies the *reason* refusal exists. `scripts/shell-check.mjs` asserts it against `corpus.json` in both languages, and a stale count fails the build.
+- **Bilingual support was undiscoverable.** The UR/EN switch changes the *shell*; seeing a bilingual **answer** required typing Urdu, which a judge cannot do on an English keyboard. §7 lists Urdu as one of three places we intend to win and it is the largest body of work in Phase 5 — and it could have gone unseen entirely. Fixed by a **fourth chip carrying the same in-corpus question in the other language**, symmetric so an Urdu shell offers the English one. Chips 1 and 4 being one question in two scripts is what makes it legible: a judge taps both and compares two answers and two source cards **with zero Urdu literacy required.**
+- **Nothing explained why the answer and the source card differ.** §5.4 forbids the model from generating corpus text, so they never match — which a judge can read as failing to quote properly rather than as the safety mechanism working. Now on the About screen.
+
+🚫 **The disclaimer bar must NOT become the tap target for About.** It was the obvious host — permanently visible, already about the rules — and it is rejected: the bar must never be dismissible, and a tappable bar invites a judge to tap it *expecting* dismissal. That risks a rubric item to close a gap the header's `i` already covers for anyone who inspects. The pointer lives on the landing screen instead.
+
+#### The reference could not help, and that is worth recording
+
+Screens 3 and 6 are both genuine empty states — `0 of 120 traits read`, `0 courses / 0 XP / 0 events` — and **neither carries a single word of explanation.** They render the normal structure with null values.
+
+That works for them because every screen in their app is a content list, and a list of Shamail traits explains itself. **Ours is the only screen in either app that has to explain a *behaviour*.** So there was nothing to borrow, and copying their approach would have been actively wrong. ⚠️ §12's instruction to check the reference first is still right — the answer here was "they did not solve this", which is only knowable by looking.
+
+One thing *was* borrowable: at zero progress they lead with **one primed action** (the "Continue reading" hero) rather than a menu of equals.
+
+⚠️ **CHIP ORDER IS LOAD-BEARING. Do not sort them or group the refusals.** A judge taps one thing first. If that is the out-of-corpus example, their first experience is a refusal from a bot that has not yet shown it can answer anything — which reads as **broken** before it reads as principled. In-corpus first means every later refusal reads as restraint.
+
+#### Direction comes from the script, not the toggle
+
+Chip 4 exposed a rendering bug that was always there: the user's own echoed message was styled by the **shell** language, so an Urdu question under an English shell rendered left-aligned, LTR, at English metrics (16/25 rather than 19/38) — losing the ﷺ leading fix (§12.0) on the one element that is a verbatim echo of what the judge typed.
+
+**Layout follows the shell; text follows the script.** Bubble side and tightened corner are properties of the surface and stay put; direction and metrics come from `isRtlScript`.
+
+🚫 **This is not language detection and does not reopen the `"he"` bug class (§5.4).** That bug was a weak roman-Urdu marker in *language* detection deciding an English question was Urdu. Script→direction cannot make that error: roman-Urdu is Latin script, so it renders LTR, which is what the user typed. Answer language is still decided server-side by `detectLanguage`, untouched.
+
+⚠️ The character class is literal UTF-8, and **a broken class fails OPEN** — everything renders LTR, silently, invisible until someone looks at a device. `shell:check` reads the line back out of `theme.ts` and asserts six cases; the guard was itself verified by deliberately dropping the presentation-forms range and watching it fail.
+
+**`scripts/shell-check.mjs` exists because `mobile/` is unreachable by both the typechecker and the test runner** — the API tsconfig excludes it and the runner globs `api/tests/*.test.ts`. Importing a mobile module from a test was tried and reverted: `module: nodenext` takes module kind from the nearest `package.json`, and adding `"type": "module"` to `mobile/package.json` to satisfy a test would change how Metro resolves the app. So these invariants are checked from outside, by reading the files as text.

@@ -80,6 +80,18 @@ export function AboutScreen({ lang, onBack }: { lang: Language; onBack: () => vo
           </View>
         ))}
 
+        {/* Explains a deliberate design choice that looks like a defect.
+            §5.4 forbids the model from generating corpus text at all, so the
+            answer never matches its own quotation — and until now nothing
+            anywhere said why. A judge could read that as the bot failing to
+            quote properly, when it is the safety mechanism working. */}
+        <Text style={[type.title, { fontSize: 17, marginTop: space.xxl, marginBottom: space.md }]}>
+          {t("paraphraseHeading", lang)}
+        </Text>
+        <View style={s.card}>
+          <Text style={bodyStyle(lang)}>{t("paraphraseBody", lang)}</Text>
+        </View>
+
         {/* Both languages are always shown, not just the active one: a judge
             reading in either language should find the exact published text
             without switching (§4). */}

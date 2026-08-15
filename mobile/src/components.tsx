@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { color, dashedCard, flatCard, radius, space, type, bodyStyle, metaStyle, isUr } from "./theme";
+import { color, dashedCard, flatCard, radius, space, type, bodyStyle, bodyStyleForText, metaStyle, isUr } from "./theme";
 import { t } from "./strings";
 import { SourcesSheet } from "./SourcesSheet";
 import { CheckIcon, CopyIcon } from "./icons";
@@ -170,7 +170,24 @@ export function UserBubble({
   onSubmitEdit?: (next: string) => void;
   onCancelEdit?: () => void;
 }) {
+  /**
+   * `ur` is the SHELL language and governs LAYOUT only — which side of the
+   * conversation the bubble sits on, and which corner is tightened. That is a
+   * property of the surface, so it stays consistent no matter what the user
+   * types.
+   *
+   * TEXT direction and metrics come from the string's own script instead. This
+   * bubble is a verbatim echo of what the user typed, and the shell language
+   * is not evidence about it: tapping the Urdu example under an English shell
+   * (or simply typing Urdu) otherwise rendered their own question left-aligned
+   * and LTR at English metrics — 16/25 rather than 19/38 — losing the ﷺ leading
+   * fix (§12.0) on the one element that is purely their own words.
+   *
+   * See `isRtlScript` in theme.ts for why this is not language detection and
+   * does not reopen the `"he"` bug class.
+   */
   const ur = isUr(lang);
+  const textStyle = bodyStyleForText(text);
   const ref = useRef<View>(null);
   const [draft, setDraft] = useState(text);
 
@@ -190,7 +207,10 @@ export function UserBubble({
               onChangeText={setDraft}
               multiline
               autoFocus
-              style={[bodyStyle(lang), s.editInput]}
+              // Follows the DRAFT's script, not the committed text's: someone
+              // rewriting an Urdu question in English should see the field
+              // flip as they type, not stay stuck RTL.
+              style={[bodyStyleForText(draft), s.editInput]}
               accessibilityLabel={t("editMessage", lang)}
             />
           </View>
@@ -236,7 +256,7 @@ export function UserBubble({
         accessibilityLabel={text}
         accessibilityHint={t("longPressHint", lang)}
       >
-        <Text style={[bodyStyle(lang), { color: color.onPrimary }]}>{text}</Text>
+        <Text style={[textStyle, { color: color.onPrimary }]}>{text}</Text>
       </Pressable>
     </View>
   );
@@ -432,16 +452,63 @@ export function DisclaimerBar({ text, lang }: { text: string; lang: Language }) 
 /* ── Empty state ────────────────────────────────────────────────────────── */
 
 /**
- * Doubles as the demo script: one in-corpus, one out-of-corpus, one
- * ruling-shaped example, each labelled. The guardrails are visible before a
- * judge has to think of a question (§12.2).
+ * The landing screen — and, under unattended judging, the ENTIRE product
+ * explanation. A judge installs the APK, opens it, and nobody is there to
+ * present anything. A title, a line of description, four chips and the
+ * disclaimer bar are all they get.
+ *
+ * The reference app is no help here and was checked: screens 3 and 6 are both
+ * genuine empty states (0 of 120 traits read; 0 courses, 0 XP, 0 events) and
+ * neither carries a single word of explanation. That works for them because
+ * every screen in their app is a content list, and a list of Shamail traits
+ * explains itself. This is the only screen in either app that has to explain a
+ * BEHAVIOUR, so there was nothing to borrow and their approach — structure
+ * with null values, no copy — would be actively wrong here (§12.4).
  */
-export function EmptyState({ lang, onPick }: { lang: Language; onPick: (q: string) => void }) {
-  const examples: Array<[string, string]> = [
-    ["exampleInCorpus", "tagInCorpus"],
+export function EmptyState({ lang, onAbout, onPick }: { lang: Language; onAbout: () => void; onPick: (q: string) => void }) {
+  /**
+   * ⚠️ THE ORDER IS LOAD-BEARING. Do not sort, shuffle, or "group the
+   * refusals together".
+   *
+   * A judge taps one thing first. If that first tap is the out-of-corpus
+   * example, their first experience is a refusal from a bot that has not yet
+   * shown it can answer anything — which reads as broken before it reads as
+   * principled. In-corpus first means every later refusal reads as restraint
+   * by a bot that has already demonstrated competence.
+   *
+   * This is the reference's own instinct: at zero progress they lead with one
+   * primed "Continue reading" action rather than a menu of equals (screen 3).
+   */
+  const guardrails: Array<[string, string]> = [
+    ["exampleInCorpus", "tagInCorpus"], // ← must stay first; see above
     ["exampleOutOfCorpus", "tagOutOfCorpus"],
     ["exampleRuling", "tagRuling"],
   ];
+
+  /**
+   * Chip 4 — the same in-corpus question in the OTHER language.
+   *
+   * Without it, bilingual support is undiscoverable. The UR/EN switch changes
+   * the shell; to see a bilingual ANSWER a judge would have to type Urdu,
+   * which they cannot do on an English keyboard. §7 lists Urdu as one of three
+   * places we intend to win and it is the largest body of work in Phase 5 — and
+   * a judge could miss it entirely.
+   *
+   * Reusing the SAME question is what makes it legible: chips 1 and 4 are one
+   * question in two scripts, so a judge taps both and compares two answers and
+   * two source cards side by side. That demonstration needs zero Urdu literacy
+   * to evaluate.
+   *
+   * It is symmetric — an Urdu shell offers the English one — so an Urdu-reading
+   * judge discovers English support by the same route.
+   *
+   * It also puts the §5.4 decision on stage rather than leaving it as a claim:
+   * the answer and its citations render RTL while the toggle and the persistent
+   * disclaimer stay in the shell's language.
+   */
+  const other: Language = lang === "en" ? "ur" : "en";
+  const otherQuestion = t("exampleInCorpus", other);
+
   return (
     <View style={s.empty}>
       <View style={s.mark}>
@@ -458,12 +525,37 @@ export function EmptyState({ lang, onPick }: { lang: Language; onPick: (q: strin
       <Text style={[metaStyle(lang), { textAlign: "center", marginTop: space.sm, marginBottom: space.xl }]}>
         {t("emptyBody", lang)}
       </Text>
-      {examples.map(([qKey, tagKey]) => (
+
+      {guardrails.map(([qKey, tagKey]) => (
         <Pressable key={qKey} style={s.example} onPress={() => onPick(t(qKey as never, lang))}>
           <Text style={[bodyStyle(lang), { fontSize: isUr(lang) ? 17 : 15 }]}>{t(qKey as never, lang)}</Text>
           <Text style={[type.meta, { marginTop: space.xs }]}>{t(tagKey as never, lang)}</Text>
         </Pressable>
       ))}
+
+      {/* The question renders in ITS OWN language, not the shell's — it is the
+          only chip whose text is deliberately foreign to the surrounding UI,
+          so it needs the other language's direction, size and ﷺ leading. */}
+      <Pressable style={s.example} onPress={() => onPick(otherQuestion)}>
+        <Text style={[bodyStyle(other), { fontSize: isUr(other) ? 17 : 15 }]}>{otherQuestion}</Text>
+        <Text style={[type.meta, { marginTop: space.xs }]}>{t("tagOtherLang", lang)}</Text>
+      </Pressable>
+
+      {/* A pointer to the verbatim /meta text, which is otherwise reachable
+          only via the header's `i` — discoverable on inspection, but nothing
+          prompts the inspection, and a judge scoring "did they show the
+          disclaimer" will tick the bar and move on. The bar itself was the
+          obvious host and was rejected: see `aboutLink` in strings.ts. */}
+      <Pressable
+        onPress={onAbout}
+        style={({ pressed }) => [s.aboutLink, pressed && { opacity: 0.6 }]}
+        accessibilityRole="button"
+        accessibilityLabel={t("aboutTitle", lang)}
+      >
+        <Text style={s.aboutLinkText}>
+          {isUr(lang) ? `← ${t("aboutLink", lang)}` : `${t("aboutLink", lang)} →`}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -662,6 +754,10 @@ const s = StyleSheet.create({
     borderBottomLeftRadius: 2,
   },
   example: { ...dashedCard, padding: space.lg, marginBottom: space.md },
+  // Quiet by design: a text link, not a button. It points at supporting
+  // material and must not compete with the four chips, which are the demo.
+  aboutLink: { alignSelf: "center", paddingVertical: space.md, paddingHorizontal: space.lg },
+  aboutLinkText: { ...type.chip, color: color.primary },
 });
 
 export const styles = s;

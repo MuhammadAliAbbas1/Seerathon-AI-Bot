@@ -224,6 +224,53 @@ describe("POST /api/ask contract", () => {
     assert.equal(b.disclaimer, S.DISCLAIMER.en);
   });
 
+  /**
+   * The landing screen's fourth chip sends an URDU question while the shell is
+   * still English — the one interaction a judge is most likely to try, because
+   * it is the only visible way to discover bilingual support.
+   *
+   * Everything the client then does correctly depends on the server ignoring
+   * the `language` hint and answering in the detected language (§5.4). If the
+   * hint were ever honoured, the chip would return an English answer and the
+   * whole bilingual demonstration would silently become a no-op — while still
+   * looking like it worked.
+   *
+   * The client half (toggle unmoved, disclaimer kept in the shell's language)
+   * is one line in App.tsx: `if (res.language === lang) setDisclaimer(...)`.
+   * This pins the half a test can reach, and pins the precondition that line
+   * depends on: `response.language !== requested language`.
+   */
+  it("chip 4 — an Urdu question under an EN shell answers in Urdu, hint ignored", async () => {
+    const res = await handleAsk(
+      { question: "حضور ﷺ کا اخلاق کیسا تھا؟", language: "en" },
+      twoStage(routed([ID_BOTH]), answered("آپ ﷺ نہایت شفیق تھے۔", [ID_BOTH]))
+    );
+    assert.equal(res.status, 200);
+    const b = res.body as Record<string, unknown>;
+
+    assert.equal(b.language, "ur", "the hint must not override detection");
+    assert.notEqual(b.language, "en");
+
+    // The server localizes the disclaimer to the RESPONSE. The client then
+    // declines it because it does not match the shell — which is only
+    // meaningful while these two genuinely differ.
+    assert.equal(b.disclaimer, S.DISCLAIMER.ur);
+    assert.notEqual(b.disclaimer, S.DISCLAIMER.en);
+
+    // A source card must never mix scripts (§5.4): title and text come from
+    // the same language block as `language`.
+    //
+    // Asserted against the fake corpus's block PREFIX rather than by looking
+    // for Arabic characters — its Urdu fixtures are Latin placeholders
+    // ("UR <id>"), so a script assertion would be testing the fixture, not the
+    // selection. The real corpus was checked separately by replaying this exact
+    // question: 5 citations, every title and text byte-identical to the `ur`
+    // cache block.
+    const cite = (b.citations as Array<Record<string, string>>)[0]!;
+    assert.equal(cite.title, `UR ${ID_BOTH}`, "citation must come from the ur block");
+    assert.notEqual(cite.title, `EN ${ID_BOTH}`);
+  });
+
   it("quota exhaustion is 503 with a typed code, not a fourth mode", async () => {
     const res = await handleAsk(
       { question: Q },

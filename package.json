@@ -11,12 +11,13 @@
     "dev:api": "node api/scripts/dev-server.ts",
     "dev:api:live": "node api/scripts/dev-server.ts --live",
     "typecheck": "tsc --noEmit",
-    "check": "npm run contract:check && npm run suite:check && npm run typecheck && npm test",
+    "check": "npm run contract:check && npm run suite:check && npm run shell:check && npm run typecheck && npm test",
     "contract:sync": "node scripts/contract-sync.mjs",
     "contract:check": "node scripts/contract-sync.mjs --check",
     "suite:sync": "node scripts/suite-sync.mjs",
     "suite:check": "node scripts/suite-sync.mjs --check",
-    "suite:reconcile": "node scripts/suite-reconcile.mjs"
+    "suite:reconcile": "node scripts/suite-reconcile.mjs",
+    "shell:check": "node scripts/shell-check.mjs --check"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

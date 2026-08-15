@@ -261,7 +261,7 @@ function Root() {
         onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: true })}
       >
         {turns.length === 0 ? (
-          <EmptyState lang={lang} onPick={(q) => submit(q)} />
+          <EmptyState lang={lang} onAbout={() => setScreen("about")} onPick={(q) => submit(q)} />
         ) : (
           turns.map((turn) =>
             turn.role === "user" ? (
