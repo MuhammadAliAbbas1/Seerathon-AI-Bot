@@ -120,6 +120,46 @@ if (!classMatch) {
   }
 }
 
+/* ── 3. The demo cache covers the chips the app actually shows ──────────────
+ *
+ * The chip text lives in mobile/src/strings.ts; the cached question list lives
+ * in api/src/demo-questions.ts. Reword a chip without rebuilding the cache and
+ * the app quietly stops being covered — the demo looks prepared and is not,
+ * which is the specific failure the cache exists to prevent.
+ *
+ * Compares the chip strings, not the cache file: a stale demo-cache.json is
+ * caught by its own gate at boot, but a chip that drifted out of the curated
+ * list has nothing else watching it.
+ */
+const demoQuestions = readFileSync(join(root, "api", "src", "demo-questions.ts"), "utf8");
+
+function chipText(key, langKey) {
+  const line = strings.match(new RegExp(`${key}:\\s*\\{[^}]*${langKey}:\\s*"((?:[^"\\\\]|\\\\.)*)"`));
+  return line ? line[1] : null;
+}
+
+const chips = [];
+for (const key of ["exampleInCorpus", "exampleOutOfCorpus", "exampleRuling"])
+  for (const l of ["en", "ur"]) chips.push([`${key}.${l}`, chipText(key, l)]);
+
+console.log("\nchips covered by the demo cache:");
+for (const [name, text] of chips) {
+  if (text === null) {
+    failures.push(`could not read ${name} from strings.ts`);
+    continue;
+  }
+  // The curated list stores the question verbatim, so a literal search is the
+  // right check — anything fuzzier would pass on a near-miss, which is exactly
+  // the case that breaks.
+  const covered = demoQuestions.includes(text);
+  console.log(`  ${covered ? "✔" : "✗"} ${name.padEnd(26)} ${text.slice(0, 46)}`);
+  if (!covered) {
+    failures.push(
+      `${name} is not in api/src/demo-questions.ts — reword the chip and the demo cache stops covering it`
+    );
+  }
+}
+
 if (failures.length) {
   console.error("\nshell:check FAILED");
   for (const f of failures) console.error(`  ✗ ${f}`);

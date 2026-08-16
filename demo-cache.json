@@ -1,0 +1,517 @@
+{
+  "gate": {
+    "corpusVersion": "1.0.0",
+    "provider": "gemini",
+    "classifyModel": "gemini-2.5-flash-lite",
+    "answerModel": "gemini-2.5-flash",
+    "classifyPromptVersion": "router-v1",
+    "answerPromptVersion": "answer-v1",
+    "classifySchemaVersion": "route-v1",
+    "answerSchemaVersion": "answer-v1"
+  },
+  "builtAt": "2026-08-16T00:37:13.969Z",
+  "questions": [
+    {
+      "label": "chip in-corpus EN",
+      "question": "What was the Prophet's ﷺ character like?",
+      "language": "en",
+      "ops": [
+        "classify",
+        "answer"
+      ]
+    },
+    {
+      "label": "chip in-corpus UR",
+      "question": "حضور ﷺ کا اخلاق کیسا تھا؟",
+      "language": "ur",
+      "ops": [
+        "classify",
+        "answer"
+      ]
+    },
+    {
+      "label": "chip out-of-corpus EN",
+      "question": "What did the Prophet ﷺ think about cryptocurrency?",
+      "language": "en",
+      "ops": [
+        "classify"
+      ]
+    },
+    {
+      "label": "chip out-of-corpus UR",
+      "question": "کیا حضور ﷺ کرپٹو کرنسی کے بارے میں کچھ فرماتے ہیں؟",
+      "language": "ur",
+      "ops": [
+        "classify"
+      ]
+    },
+    {
+      "label": "typed appearance EN",
+      "question": "What did the Prophet ﷺ look like?",
+      "language": "en",
+      "ops": [
+        "classify",
+        "answer"
+      ]
+    },
+    {
+      "label": "typed appearance UR",
+      "question": "حضور ﷺ کا حلیہ مبارک کیسا تھا؟",
+      "language": "ur",
+      "ops": [
+        "classify",
+        "answer"
+      ]
+    }
+  ],
+  "entries": {
+    "4760d2360b2059ca9af5772bd1306690": {
+      "ok": true,
+      "data": {
+        "mode": "in_corpus",
+        "candidateIds": [
+          "672b3e8ed458540020750eab",
+          "672c82436fa080001f6a18fc",
+          "672c93c01c9a6f001f8eec39",
+          "672c8b7d1c9a6f001f8eea5c",
+          "67347128bd8a1c00203035a7"
+        ]
+      },
+      "raw": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"672b3e8ed458540020750eab\",\n    \"672c82436fa080001f6a18fc\",\n    \"672c93c01c9a6f001f8eec39\",\n    \"672c8b7d1c9a6f001f8eea5c\",\n    \"67347128bd8a1c00203035a7\"\n  ]\n}"
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 13991,
+          "candidatesTokenCount": 155,
+          "totalTokenCount": 14146,
+          "cachedContentTokenCount": 13063,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 13991
+            }
+          ],
+          "cacheTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 13063
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash-lite",
+        "responseId": "Wch7ar3aIpz_nsEP96ju4Qw"
+      }
+    },
+    "aa30c48739dbdef8455c8adc67f5ae15": {
+      "ok": true,
+      "data": {
+        "answer": "The Prophet Muhammad ﷺ was characterized by profound mercy and compassion, extending his concern to his entire Ummah, women, and even those who disbelieved or caused him harm. He never sought personal revenge for himself, choosing instead to forgive those who wronged him, as exemplified by his prayer for the people of Ta'if and his forgiveness of those who injured him in battle. His commitment to justice was absolute; he upheld Allah's laws impartially, declaring that even his own daughter would face punishment if she committed theft. He was deeply burdened by the suffering of others, always praying for their guidance and well-being, and was gentle and considerate, particularly towards women, even shortening prayers out of concern for a mother's distress.",
+        "citations": [
+          "672b3e8ed458540020750eab",
+          "672c82436fa080001f6a18fc",
+          "672c93c01c9a6f001f8eec39",
+          "672c8b7d1c9a6f001f8eea5c",
+          "67347128bd8a1c00203035a7"
+        ]
+      },
+      "raw": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "text": "{\"answer\": \"The Prophet Muhammad ﷺ was characterized by profound mercy and compassion, extending his concern to his entire Ummah, women, and even those who disbelieved or caused him harm. He never sought personal revenge for himself, choosing instead to forgive those who wronged him, as exemplified by his prayer for the people of Ta'if and his forgiveness of those who injured him in battle. His commitment to justice was absolute; he upheld Allah's laws impartially, declaring that even his own daughter would face punishment if she committed theft. He was deeply burdened by the suffering of others, always praying for their guidance and well-being, and was gentle and considerate, particularly towards women, even shortening prayers out of concern for a mother's distress.\",\"citations\": [\"672b3e8ed458540020750eab\", \"672c82436fa080001f6a18fc\", \"672c93c01c9a6f001f8eec39\", \"672c8b7d1c9a6f001f8eea5c\", \"67347128bd8a1c00203035a7\"]}"
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 2758,
+          "candidatesTokenCount": 277,
+          "totalTokenCount": 3669,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 2758
+            }
+          ],
+          "thoughtsTokenCount": 634,
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash",
+        "responseId": "eMx7arzRLvHYvdIPzciDqQU"
+      }
+    },
+    "254ba895fa1105aa8af89def742a15f4": {
+      "ok": true,
+      "data": {
+        "mode": "in_corpus",
+        "candidateIds": [
+          "672b3e8ed458540020750eab",
+          "672b449ad458540020750f9f",
+          "672c82436fa080001f6a18fc",
+          "672c8b7d1c9a6f001f8eea5c",
+          "672c93c01c9a6f001f8eec39"
+        ]
+      },
+      "raw": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"672b3e8ed458540020750eab\",\n    \"672b449ad458540020750f9f\",\n    \"672c82436fa080001f6a18fc\",\n    \"672c8b7d1c9a6f001f8eea5c\",\n    \"672c93c01c9a6f001f8eec39\"\n  ]\n}"
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 13991,
+          "candidatesTokenCount": 155,
+          "totalTokenCount": 14146,
+          "cachedContentTokenCount": 13063,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 13991
+            }
+          ],
+          "cacheTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 13063
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash-lite",
+        "responseId": "W8h7atHsL-zhnsEPsPuK0As"
+      }
+    },
+    "b1aba692fbeeefaaaa8647cac1eb5840": {
+      "ok": true,
+      "data": {
+        "answer": "حضور اکرم ﷺ کا اخلاق نہایت اعلیٰ اور بے مثال تھا۔ آپ ﷺ نے کبھی اپنی ذات کے لیے کسی سے بدلہ نہیں لیا، بلکہ زیادتی کرنے والوں کو بھی معاف فرما دیتے تھے، جیسا کہ فتح مکہ کے دن قریش کے جباروں کو معاف کر دیا۔ آپ ﷺ صبر و تحمل کا پیکر تھے، کفار کی شدید اذیتوں کے باوجود بددعا کرنے سے گریز کرتے اور ان کی ہدایت کی دعا فرماتے تھے۔ آپ ﷺ اپنی امت پر بے حد شفیق اور مہربان تھے، ان کی آسانی کے لیے کئی اعمال کو ترک فرما دیا اور معراج کے موقع پر پچاس نمازوں کو پانچ تک کم کرایا۔ عورتوں کے ساتھ بھی آپ ﷺ کا سلوک نہایت شفقت آمیز تھا، ان کے دلوں کا خیال رکھتے اور ان کی مشکلات کو دور فرماتے تھے۔",
+        "citations": [
+          "672b3e8ed458540020750eab",
+          "672b449ad458540020750f9f",
+          "672c82436fa080001f6a18fc",
+          "672c8b7d1c9a6f001f8eea5c",
+          "672c93c01c9a6f001f8eec39"
+        ]
+      },
+      "raw": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "text": "{\n  \"answer\": \"حضور اکرم ﷺ کا اخلاق نہایت اعلیٰ اور بے مثال تھا۔ آپ ﷺ نے کبھی اپنی ذات کے لیے کسی سے بدلہ نہیں لیا، بلکہ زیادتی کرنے والوں کو بھی معاف فرما دیتے تھے، جیسا کہ فتح مکہ کے دن قریش کے جباروں کو معاف کر دیا۔ آپ ﷺ صبر و تحمل کا پیکر تھے، کفار کی شدید اذیتوں کے باوجود بددعا کرنے سے گریز کرتے اور ان کی ہدایت کی دعا فرماتے تھے۔ آپ ﷺ اپنی امت پر بے حد شفیق اور مہربان تھے، ان کی آسانی کے لیے کئی اعمال کو ترک فرما دیا اور معراج کے موقع پر پچاس نمازوں کو پانچ تک کم کرایا۔ عورتوں کے ساتھ بھی آپ ﷺ کا سلوک نہایت شفقت آمیز تھا، ان کے دلوں کا خیال رکھتے اور ان کی مشکلات کو دور فرماتے تھے۔\",\n  \"citations\": [\n    \"672b3e8ed458540020750eab\",\n    \"672b449ad458540020750f9f\",\n    \"672c82436fa080001f6a18fc\",\n    \"672c8b7d1c9a6f001f8eea5c\",\n    \"672c93c01c9a6f001f8eec39\"\n  ]\n}"
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 4051,
+          "candidatesTokenCount": 330,
+          "totalTokenCount": 5217,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 4051
+            }
+          ],
+          "thoughtsTokenCount": 836,
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash",
+        "responseId": "fsx7ar-6BIaY28oPgMvwiAY"
+      }
+    },
+    "bcae350225890a86dde78c6c1741e12f": {
+      "ok": true,
+      "data": {
+        "mode": "out_of_corpus",
+        "candidateIds": []
+      },
+      "raw": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "text": "{\n  \"mode\": \"out_of_corpus\",\n  \"candidateIds\": []\n}"
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 13990,
+          "candidatesTokenCount": 22,
+          "totalTokenCount": 14012,
+          "cachedContentTokenCount": 13063,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 13990
+            }
+          ],
+          "cacheTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 13063
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash-lite",
+        "responseId": "X8h7ap_3Mo-VnsEPxZjn4QM"
+      }
+    },
+    "27586cec73481d870611d42f709dbd17": {
+      "ok": true,
+      "data": {
+        "mode": "out_of_corpus",
+        "candidateIds": []
+      },
+      "raw": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "text": "{\n  \"mode\": \"out_of_corpus\",\n  \"candidateIds\": []\n}"
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 13997,
+          "candidatesTokenCount": 22,
+          "totalTokenCount": 14019,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 13997
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash-lite",
+        "responseId": "jAWBapmUIurlnsEPg9_2sAI"
+      }
+    },
+    "57046bfef0019426f19782f4acef096a": {
+      "ok": true,
+      "data": {
+        "mode": "in_corpus",
+        "candidateIds": [
+          "674ed107f8a58b001f4e554f",
+          "674ed66cf8a58b001f4e55e6",
+          "67501dcf2b6910001ffbd06a",
+          "675021362b6910001ffbd15f",
+          "675024d62b6910001ffbd202"
+        ]
+      },
+      "raw": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"674ed107f8a58b001f4e554f\",\n    \"674ed66cf8a58b001f4e55e6\",\n    \"67501dcf2b6910001ffbd06a\",\n    \"675021362b6910001ffbd15f\",\n    \"675024d62b6910001ffbd202\"\n  ]\n}"
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 13989,
+          "candidatesTokenCount": 153,
+          "totalTokenCount": 14142,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 13989
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash-lite",
+        "responseId": "nAWBaqDSD5m9kdUPm8SG0A0"
+      }
+    },
+    "671dacb5e3c1dac6b4406fe074abf519": {
+      "ok": true,
+      "data": {
+        "answer": "The Prophet Muhammad ﷺ was of medium height, neither very tall nor very short, and had a remarkably handsome physique. His blessed chest was broad and expansive, with no overlapping flesh, appearing as even as glass and as white as the moon. A fine line of hair extended from his upper chest to his navel, but no other hair was present on his chest or abdomen. His hair was neither very curly nor completely straight, and it would sometimes reach just above his shoulders or slightly below his ears. His complexion was described as wheat-colored, or white with a reddish tint, which gave his appearance a radiant glow. His face was somewhat rounded and so luminous that it was considered more beautiful than the full moon on its fourteenth night, even reflecting objects around him when he was happy.",
+        "citations": [
+          "674ed107f8a58b001f4e554f",
+          "674ed66cf8a58b001f4e55e6",
+          "67501dcf2b6910001ffbd06a",
+          "675021362b6910001ffbd15f",
+          "675024d62b6910001ffbd202"
+        ]
+      },
+      "raw": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "text": "{\n  \"answer\": \"The Prophet Muhammad ﷺ was of medium height, neither very tall nor very short, and had a remarkably handsome physique. His blessed chest was broad and expansive, with no overlapping flesh, appearing as even as glass and as white as the moon. A fine line of hair extended from his upper chest to his navel, but no other hair was present on his chest or abdomen. His hair was neither very curly nor completely straight, and it would sometimes reach just above his shoulders or slightly below his ears. His complexion was described as wheat-colored, or white with a reddish tint, which gave his appearance a radiant glow. His face was somewhat rounded and so luminous that it was considered more beautiful than the full moon on its fourteenth night, even reflecting objects around him when he was happy.\",\n  \"citations\": [\n    \"674ed107f8a58b001f4e554f\",\n    \"674ed66cf8a58b001f4e55e6\",\n    \"67501dcf2b6910001ffbd06a\",\n    \"675021362b6910001ffbd15f\",\n    \"675024d62b6910001ffbd202\"\n  ]\n}"
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 1877,
+          "candidatesTokenCount": 305,
+          "totalTokenCount": 2182,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 1877
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash",
+        "responseId": "nQWBapmwNMP5nsEPytL1iQE"
+      }
+    },
+    "07fa128104b755a84d8254ff50368d33": {
+      "ok": true,
+      "data": {
+        "mode": "in_corpus",
+        "candidateIds": [
+          "674ed107f8a58b001f4e554f",
+          "675021362b6910001ffbd15f",
+          "675024d62b6910001ffbd202",
+          "67502b562b6910001ffbd2fb",
+          "67809cf686d15e53b9dbda93"
+        ]
+      },
+      "raw": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"674ed107f8a58b001f4e554f\",\n    \"675021362b6910001ffbd15f\",\n    \"675024d62b6910001ffbd202\",\n    \"67502b562b6910001ffbd2fb\",\n    \"67809cf686d15e53b9dbda93\"\n  ]\n}"
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 13994,
+          "candidatesTokenCount": 152,
+          "totalTokenCount": 14146,
+          "cachedContentTokenCount": 13063,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 13994
+            }
+          ],
+          "cacheTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 13063
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash-lite",
+        "responseId": "rgWBaoClBvCMkdUPtP6YoQI"
+      }
+    },
+    "f73331b2caba8d850d259de8b45ad1e4": {
+      "ok": true,
+      "data": {
+        "answer": "نبی اکرم ﷺ کا قد مبارک درمیانہ تھا، نہ بہت لمبے اور نہ ہی بہت چھوٹے، لیکن جب آپ ﷺ کسی مجمع میں ہوتے تو سب سے بلند نظر آتے تھے۔ آپ ﷺ کا چہرہ انور چودھویں کے چاند سے زیادہ حسین اور روشن تھا، اور آپ ﷺ کا رنگ مبارک سرخ و سفید اور چمکدار تھا۔ آپ ﷺ کی پیشانی کشادہ اور نورانی تھی، جس سے نور کی شعاعیں نکلتی تھیں۔ آپ ﷺ کے دانت مبارک کشادہ، نہایت سفید، چمکدار اور موتیوں کی طرح خوبصورت تھے۔ جب آپ ﷺ گفتگو فرماتے تو دانتوں کے درمیان سے نور ظاہر ہوتا تھا۔",
+        "citations": [
+          "674ed107f8a58b001f4e554f",
+          "675021362b6910001ffbd15f",
+          "675024d62b6910001ffbd202",
+          "67502b562b6910001ffbd2fb",
+          "67809cf686d15e53b9dbda93"
+        ]
+      },
+      "raw": {
+        "candidates": [
+          {
+            "content": {
+              "parts": [
+                {
+                  "text": "{\n  \"answer\": \"نبی اکرم ﷺ کا قد مبارک درمیانہ تھا، نہ بہت لمبے اور نہ ہی بہت چھوٹے، لیکن جب آپ ﷺ کسی مجمع میں ہوتے تو سب سے بلند نظر آتے تھے۔ آپ ﷺ کا چہرہ انور چودھویں کے چاند سے زیادہ حسین اور روشن تھا، اور آپ ﷺ کا رنگ مبارک سرخ و سفید اور چمکدار تھا۔ آپ ﷺ کی پیشانی کشادہ اور نورانی تھی، جس سے نور کی شعاعیں نکلتی تھیں۔ آپ ﷺ کے دانت مبارک کشادہ، نہایت سفید، چمکدار اور موتیوں کی طرح خوبصورت تھے۔ جب آپ ﷺ گفتگو فرماتے تو دانتوں کے درمیان سے نور ظاہر ہوتا تھا۔\",\n  \"citations\": [\n    \"674ed107f8a58b001f4e554f\",\n    \"675021362b6910001ffbd15f\",\n    \"675024d62b6910001ffbd202\",\n    \"67502b562b6910001ffbd2fb\",\n    \"67809cf686d15e53b9dbda93\"\n  ]\n}"
+                }
+              ],
+              "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 3568,
+          "candidatesTokenCount": 287,
+          "totalTokenCount": 3855,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 3568
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash",
+        "responseId": "sAWBapSVBfX6nsEPlpPRmAE"
+      }
+    }
+  }
+}

@@ -21,7 +21,18 @@ export type ProviderFailure =
  * paths (finishReason, safetyRatings, usageMetadata) and not just happy ones.
  */
 export type ProviderOutcome =
-  | { ok: true; data: unknown; raw: unknown }
+  | {
+      ok: true;
+      data: unknown;
+      raw: unknown;
+      /**
+       * Set only by the demo cache (§5.6): this is a replayed model response,
+       * not a live one. Diagnostic — it never changes how the outcome is
+       * treated, because a replayed judgement is validated by exactly the same
+       * code as a live one.
+       */
+      fromCache?: true;
+    }
   | { ok: false; failure: ProviderFailure; detail: string; raw?: unknown };
 
 export interface ClassifyRequest {

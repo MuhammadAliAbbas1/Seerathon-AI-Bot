@@ -55,4 +55,6 @@ export interface RouteResult {
    * wire and never shown to a user.
    */
   detail?: string;
+  /** The classification came from the demo cache rather than a live call (§5.6). */
+  fromCache?: boolean;
 }

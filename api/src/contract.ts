@@ -57,6 +57,21 @@ export interface AskResponseBody {
   /** Server-owned so the surface cannot forget to show it, and so the copy
    *  carrying three of four rubric behaviours has one source of truth. */
   disclaimer: string;
+  /**
+   * DIAGNOSTIC. Which model calls were replayed from the demo cache (§5.6).
+   * The client ignores this and must never render it.
+   *
+   *   live | cache | mixed | none   ("none" = the ruling ratchet fired and no
+   *                                  model was consulted at all)
+   *
+   * Not user-facing on purpose: a cached answer is the same claim, validated
+   * by the same code against the same corpus, so labelling it would imply a
+   * distinction that does not exist. It is on the wire for the one case where
+   * it matters — a provider outage with the cache serving the example chips
+   * would leave the app looking healthy while the system is not, and being
+   * unable to tell OURSELVES would be misreporting our own state.
+   */
+  servedFrom?: "live" | "cache" | "mixed" | "none";
 }
 
 /**

@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "ur",
+    "question": "کیا حضور ﷺ کرپٹو کرنسی کے بارے میں کچھ فرماتے ہیں؟",
+    "recordedAt": "2026-08-16T00:34:21.462Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "out_of_corpus",
+      "candidateIds": []
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"out_of_corpus\",\n  \"candidateIds\": []\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13997,
+        "candidatesTokenCount": 22,
+        "totalTokenCount": 14019,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13997
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "jAWBapmUIurlnsEPg9_2sAI"
+    }
+  }
+}

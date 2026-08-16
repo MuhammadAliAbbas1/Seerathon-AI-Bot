@@ -17,7 +17,10 @@
     "suite:sync": "node scripts/suite-sync.mjs",
     "suite:check": "node scripts/suite-sync.mjs --check",
     "suite:reconcile": "node scripts/suite-reconcile.mjs",
-    "shell:check": "node scripts/shell-check.mjs --check"
+    "shell:check": "node scripts/shell-check.mjs --check",
+    "demo-cache:record": "node api/scripts/demo-cache-record.ts",
+    "demo-cache:dry": "node api/scripts/demo-cache-record.ts --dry",
+    "demo-cache:build": "node api/scripts/demo-cache-build.ts"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

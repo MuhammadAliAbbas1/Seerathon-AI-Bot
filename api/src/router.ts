@@ -23,17 +23,33 @@ import type { LlmProvider, ProviderOutcome } from "./providers/types.ts";
 /** Anything above this is padding; the answer path does not need more. */
 const MAX_CANDIDATES = 5;
 
-function refuse(language: Language, detected: RouteResult["detected"], reason: RouteReason): RouteResult {
-  return { mode: "ruling_seeking", language, detected, candidateIds: [], reason };
+/**
+ * ⚠️ `fromCache` is threaded through the REFUSAL paths too, not just the
+ * in_corpus one.
+ *
+ * It was originally set only on the in_corpus return, which made a cached
+ * out_of_corpus refusal report `servedFrom: "live"` — the diagnostic claiming
+ * a live provider call that never happened. That is precisely the failure this
+ * field exists to catch (§5.6): a system that cannot tell the truth about its
+ * own state is no better for having a field named after the truth.
+ */
+function refuse(
+  language: Language,
+  detected: RouteResult["detected"],
+  reason: RouteReason,
+  fromCache = false
+): RouteResult {
+  return { mode: "ruling_seeking", language, detected, candidateIds: [], reason, fromCache };
 }
 
 function fallback(
   language: Language,
   detected: RouteResult["detected"],
   reason: RouteReason,
-  detail?: string
+  detail?: string,
+  fromCache = false
 ): RouteResult {
-  return { mode: "out_of_corpus", language, detected, candidateIds: [], reason, detail };
+  return { mode: "out_of_corpus", language, detected, candidateIds: [], reason, detail, fromCache };
 }
 
 /** Maps a provider failure onto a reason. Every branch ends at out_of_corpus. */
@@ -105,12 +121,12 @@ export async function route(question: string, opts: RouteOptions): Promise<Route
   // ── 3. Validate the shape in code ─────────────────────────────────────────
   const data = outcome.data as Record<string, unknown> | null;
   if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return fallback(language, detected, "model-malformed");
+    return fallback(language, detected, "model-malformed", undefined, outcome.fromCache === true);
   }
 
   // The load-bearing check. `enum` in responseSchema is advisory on Gemini.
   if (!isMode(data.mode)) {
-    return fallback(language, detected, "model-off-enum");
+    return fallback(language, detected, "model-off-enum", undefined, outcome.fromCache === true);
   }
 
   // ── 4. Precedence, enforced in code ───────────────────────────────────────
@@ -118,10 +134,10 @@ export async function route(question: string, opts: RouteOptions): Promise<Route
   // refuse, and we never carry candidates through a refusal (§5.4 — a
   // non-empty citations array on a refusal mode is a bug).
   if (data.mode === "ruling_seeking") {
-    return refuse(language, detected, "model");
+    return refuse(language, detected, "model", outcome.fromCache === true);
   }
   if (data.mode === "out_of_corpus") {
-    return fallback(language, detected, "model");
+    return fallback(language, detected, "model", undefined, outcome.fromCache === true);
   }
 
   // ── 5. in_corpus — candidates must survive validation ─────────────────────
@@ -135,8 +151,17 @@ export async function route(question: string, opts: RouteOptions): Promise<Route
   // attached a decorative reference. Fail closed rather than let the answer
   // path try.
   if (valid.length === 0) {
-    return fallback(language, detected, "no-valid-candidates");
+    return fallback(language, detected, "no-valid-candidates", undefined, outcome.fromCache === true);
   }
 
-  return { mode: "in_corpus", language, detected, candidateIds: valid, reason: "model" };
+  return {
+    mode: "in_corpus",
+    language,
+    detected,
+    candidateIds: valid,
+    reason: "model",
+    // Diagnostic only. Note this rides on the outcome AFTER every check above
+    // has run — a cached classification is validated identically to a live one.
+    fromCache: outcome.fromCache === true,
+  };
 }

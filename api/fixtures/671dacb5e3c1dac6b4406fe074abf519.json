@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v1",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "What did the Prophet ﷺ look like?",
+    "recordedAt": "2026-08-16T00:34:39.346Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad ﷺ was of medium height, neither very tall nor very short, and had a remarkably handsome physique. His blessed chest was broad and expansive, with no overlapping flesh, appearing as even as glass and as white as the moon. A fine line of hair extended from his upper chest to his navel, but no other hair was present on his chest or abdomen. His hair was neither very curly nor completely straight, and it would sometimes reach just above his shoulders or slightly below his ears. His complexion was described as wheat-colored, or white with a reddish tint, which gave his appearance a radiant glow. His face was somewhat rounded and so luminous that it was considered more beautiful than the full moon on its fourteenth night, even reflecting objects around him when he was happy.",
+      "citations": [
+        "674ed107f8a58b001f4e554f",
+        "674ed66cf8a58b001f4e55e6",
+        "67501dcf2b6910001ffbd06a",
+        "675021362b6910001ffbd15f",
+        "675024d62b6910001ffbd202"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The Prophet Muhammad ﷺ was of medium height, neither very tall nor very short, and had a remarkably handsome physique. His blessed chest was broad and expansive, with no overlapping flesh, appearing as even as glass and as white as the moon. A fine line of hair extended from his upper chest to his navel, but no other hair was present on his chest or abdomen. His hair was neither very curly nor completely straight, and it would sometimes reach just above his shoulders or slightly below his ears. His complexion was described as wheat-colored, or white with a reddish tint, which gave his appearance a radiant glow. His face was somewhat rounded and so luminous that it was considered more beautiful than the full moon on its fourteenth night, even reflecting objects around him when he was happy.\",\n  \"citations\": [\n    \"674ed107f8a58b001f4e554f\",\n    \"674ed66cf8a58b001f4e55e6\",\n    \"67501dcf2b6910001ffbd06a\",\n    \"675021362b6910001ffbd15f\",\n    \"675024d62b6910001ffbd202\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 1877,
+        "candidatesTokenCount": 305,
+        "totalTokenCount": 2182,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1877
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "nQWBapmwNMP5nsEPytL1iQE"
+    }
+  }
+}

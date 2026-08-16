@@ -21,6 +21,7 @@
 import { createServer } from "node:http";
 import { handleAsk } from "./api/src/http.ts";
 import { createGeminiProvider } from "./api/src/providers/gemini.ts";
+import { withDemoCache } from "./api/src/demo-cache.ts";
 import { createOpenRouterProvider } from "./api/src/providers/openrouter.ts";
 import { loadCorpus } from "./api/src/corpus.ts";
 import { configSource, describeKey, providerId, readEnv } from "./api/src/config.ts";
@@ -65,9 +66,17 @@ async function probeEgress(): Promise<Record<string, unknown>> {
 }
 
 // No fixture layer in production: a deployed backend answers questions, it
-// does not replay a test corpus. (§5.6's pre-seeded demo cache is a separate,
-// deliberate Phase 7 artifact and is not this.)
-const provider = providerId() === "openrouter" ? createOpenRouterProvider() : createGeminiProvider();
+// does not replay a test corpus.
+//
+// The demo cache IS wired in, and is a different thing (§5.6). It holds
+// recorded MODEL RESPONSES for the landing screen's example chips — the four
+// things we actively invite a judge to tap — so those cannot 503 on a provider
+// outage. On a hit the pipeline still runs end to end: the ruling ratchet
+// fires first, §5.3 re-validates every citation against the current corpus,
+// and precedence re-runs. We replay the model's judgement; our own safety
+// logic always runs. A miss falls through here, live, exactly as before.
+const liveProvider = providerId() === "openrouter" ? createOpenRouterProvider() : createGeminiProvider();
+const { provider, status: demoCache } = withDemoCache(liveProvider);
 
 // Touch the corpus at module scope so a bad bake fails at boot, in the build
 // logs, rather than on a judge's first question.
@@ -115,6 +124,11 @@ const server = createServer(async (req, res) => {
       openrouterKey: describeKey("OPENROUTER_API_KEY"),
       corpusVersion: corpus.corpusVersion,
       entries: corpus.counts.total,
+      // Whether the demo cache loaded, and if not, why. A silently-refused
+      // cache looks like insurance and is not, so its state has to be
+      // checkable from outside rather than assumed (§5.6). Reports counts and
+      // a gate mismatch reason — never question text or answers.
+      demoCache,
       timeouts: {
         routerMs: ROUTER_TIMEOUT_MS,
         answerMs: ANSWER_TIMEOUT_MS,
@@ -191,6 +205,7 @@ const server = createServer(async (req, res) => {
 server.listen(Number(process.env.PORT ?? readEnv("PORT") ?? 8787), () => {
   console.log(
     `Seerathon API up — provider=${providerId()} config=${configSource()} ` +
-      `corpus=${corpus.corpusVersion} entries=${corpus.counts.total} env=${readEnv("DEPLOY_ENV") ?? "unset"}`
+      `corpus=${corpus.corpusVersion} entries=${corpus.counts.total} env=${readEnv("DEPLOY_ENV") ?? "unset"} ` +
+      `demoCache=${demoCache.usable ? `${demoCache.entries} entries` : demoCache.present ? "REFUSED" : "absent"}`
   );
 });

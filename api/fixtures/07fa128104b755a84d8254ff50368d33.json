@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "ur",
+    "question": "حضور ﷺ کا حلیہ مبارک کیسا تھا؟",
+    "recordedAt": "2026-08-16T00:34:55.272Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "in_corpus",
+      "candidateIds": [
+        "674ed107f8a58b001f4e554f",
+        "675021362b6910001ffbd15f",
+        "675024d62b6910001ffbd202",
+        "67502b562b6910001ffbd2fb",
+        "67809cf686d15e53b9dbda93"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"674ed107f8a58b001f4e554f\",\n    \"675021362b6910001ffbd15f\",\n    \"675024d62b6910001ffbd202\",\n    \"67502b562b6910001ffbd2fb\",\n    \"67809cf686d15e53b9dbda93\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13994,
+        "candidatesTokenCount": 152,
+        "totalTokenCount": 14146,
+        "cachedContentTokenCount": 13063,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13994
+          }
+        ],
+        "cacheTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13063
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "rgWBaoClBvCMkdUPtP6YoQI"
+    }
+  }
+}

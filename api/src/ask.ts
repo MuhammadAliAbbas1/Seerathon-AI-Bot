@@ -25,6 +25,26 @@ export interface AskSuccess {
   citations: Citation[];
   /** Diagnostic. Never rendered. */
   reason: string;
+  /**
+   * Which provider calls were replayed from the demo cache (§5.6).
+   *
+   * `live`  — every model call went to the provider
+   * `cache` — every model call was replayed
+   * `mixed` — some of each (e.g. classification cached, answer live)
+   * `none`  — no model call was made at all: the ruling ratchet fired, which
+   *           costs zero requests by design (§5.5)
+   *
+   * NOT user-facing, and deliberately so: a cached answer is the same claim,
+   * validated by the same code against the same corpus, so labelling it would
+   * imply a distinction that does not exist.
+   *
+   * It is on the wire anyway because of the one case where it genuinely
+   * matters — if the provider is down and the cache is serving the chips, the
+   * app looks healthy while the system is not. Not telling a user is fine;
+   * being unable to tell OURSELVES would be us misreporting our own state,
+   * which is the thing this project refuses to do (§5.6).
+   */
+  servedFrom: "live" | "cache" | "mixed" | "none";
 }
 
 export interface AskFailure {
@@ -80,7 +100,12 @@ export interface AskOptions {
   history?: unknown;
 }
 
-function refusal(mode: Mode, language: Language, reason: string): AskSuccess {
+function refusal(
+  mode: Mode,
+  language: Language,
+  reason: string,
+  servedFrom: AskSuccess["servedFrom"] = "live"
+): AskSuccess {
   return {
     ok: true,
     mode,
@@ -90,7 +115,17 @@ function refusal(mode: Mode, language: Language, reason: string): AskSuccess {
     answer: mode === "ruling_seeking" ? S.RULING_SEEKING[language] : S.OUT_OF_CORPUS[language],
     citations: [],
     reason,
+    servedFrom,
   };
+}
+
+/**
+ * `none` when the ratchet fired — no model was consulted at all, which is not
+ * the same claim as "the provider answered" and must not be logged as one.
+ */
+function servedFromRoute(routed: { reason: string; fromCache?: boolean }): AskSuccess["servedFrom"] {
+  if (routed.reason === "keyword-ratchet") return "none";
+  return routed.fromCache ? "cache" : "live";
 }
 
 /**
@@ -155,13 +190,13 @@ export async function ask(question: string, opts: AskOptions): Promise<AskResult
   // Refusals cost ZERO further requests — three of the four rubric behaviours
   // never touch the answering model at all.
   if (routed.mode !== "in_corpus") {
-    return refusal(routed.mode, language, routed.reason);
+    return refusal(routed.mode, language, routed.reason, servedFromRoute(routed));
   }
 
   // ── 2. Assemble grounding material from the CACHE ─────────────────────────
   const entries = buildPromptEntries(routed.candidateIds, language);
   if (entries.length === 0) {
-    return refusal("out_of_corpus", language, "no-usable-entries");
+    return refusal("out_of_corpus", language, "no-usable-entries", servedFromRoute(routed));
   }
 
   // ── 3. Generate ───────────────────────────────────────────────────────────
@@ -205,9 +240,21 @@ export async function ask(question: string, opts: AskOptions): Promise<AskResult
   }
 
   // ── 4. Validate before anything reaches the user ──────────────────────────
+  //
+  // Combine the two legs. `mixed` is a real state worth naming rather than
+  // rounding off: a cached classification with a live answer means the cache
+  // is only half covering this question, which is exactly the thing you want
+  // to see in a log before a demo rather than after one.
+  const routeLeg = servedFromRoute(routed);
+  const answerCached = outcome.fromCache === true;
+  const served: AskSuccess["servedFrom"] =
+    routeLeg === "cache" && answerCached ? "cache"
+    : routeLeg === "live" && !answerCached ? "live"
+    : "mixed";
+
   const data = outcome.data as Record<string, unknown> | null;
   if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return refusal("out_of_corpus", language, "answer-malformed");
+    return refusal("out_of_corpus", language, "answer-malformed", served);
   }
 
   const answer = typeof data.answer === "string" ? data.answer.trim() : "";
@@ -216,8 +263,8 @@ export async function ask(question: string, opts: AskOptions): Promise<AskResult
   // Never trust the model's self-reported citations. No citations, or any bad
   // one, and the answer is discarded entirely.
   if (!answer || !citations) {
-    return refusal("out_of_corpus", language, citations ? "answer-empty" : "citations-invalid");
+    return refusal("out_of_corpus", language, citations ? "answer-empty" : "citations-invalid", served);
   }
 
-  return { ok: true, mode: "in_corpus", language, answer, citations, reason: routed.reason };
+  return { ok: true, mode: "in_corpus", language, answer, citations, reason: routed.reason, servedFrom: served };
 }

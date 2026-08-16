@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "en",
+    "question": "What did the Prophet ﷺ look like?",
+    "recordedAt": "2026-08-16T00:34:37.085Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "in_corpus",
+      "candidateIds": [
+        "674ed107f8a58b001f4e554f",
+        "674ed66cf8a58b001f4e55e6",
+        "67501dcf2b6910001ffbd06a",
+        "675021362b6910001ffbd15f",
+        "675024d62b6910001ffbd202"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"674ed107f8a58b001f4e554f\",\n    \"674ed66cf8a58b001f4e55e6\",\n    \"67501dcf2b6910001ffbd06a\",\n    \"675021362b6910001ffbd15f\",\n    \"675024d62b6910001ffbd202\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13989,
+        "candidatesTokenCount": 153,
+        "totalTokenCount": 14142,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13989
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "nAWBaqDSD5m9kdUPm8SG0A0"
+    }
+  }
+}

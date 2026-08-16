@@ -78,6 +78,9 @@ export async function handleAsk(rawBody: unknown, provider: LlmProvider): Promis
       // Sent with every response so the surface cannot forget to show it. The
       // rubric requires it persistently visible and non-dismissible (§4).
       disclaimer: DISCLAIMER[result.language],
+      // Diagnostic. The client ignores it; see the contract for why it is on
+      // the wire at all rather than only in the logs.
+      servedFrom: result.servedFrom,
     },
   };
 }

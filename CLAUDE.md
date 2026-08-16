@@ -512,7 +512,41 @@ Two rules follow:
 
 - **Key:** `sha256(NFC-normalized + whitespace-collapsed + trimmed question + language + corpus_version + prompt_version)`. **NFC normalization is not optional** — Urdu and Arabic have multiple valid encodings of the same grapheme, so visually identical questions hash differently without it.
 - **Store:** in-process LRU `Map`. No new dependency, no infrastructure. Dies on cold start, not shared across instances — acceptable for a single demo session.
-- **Pre-seed at boot from a committed `demo-cache.json`** of rehearsed demo questions and their validated answers. The rehearsed demo then makes **zero API calls** and is immune to quota exhaustion, rate limiting, *and* a Gemini outage during judging. Novel judge questions still go live. This is our best demo insurance.
+- **Pre-seed from a committed `demo-cache.json`.** The example chips then make **zero API calls** and are immune to quota exhaustion, rate limiting, *and* a Gemini outage during judging. Novel judge questions still go live. This is our best demo insurance. **Built 2026-08-16 — see below for what it actually caches, which is not what this line originally said.**
+
+#### The demo cache caches the MODEL'S RESPONSES, not our answers
+
+The line above specified an LRU of finished responses. **Caching one layer lower — at the provider seam — is strictly safer, and that is what shipped.**
+
+On a hit the pipeline still runs end to end and only skips the network:
+
+- the **ruling ratchet fires first**, before anything cached is consulted, so a keyword added tomorrow refuses a question the cache would have answered yesterday. §5.5's one-way ratchet cannot be overridden by a stale entry
+- **§5.3's three citation checks re-run against the current corpus**, so a cached citation whose entry lost its body text is discarded exactly as a live one would be
+- precedence, language detection and the fail-closed path all re-run live
+
+> ### 🔑 We replay the model's judgement; our own safety logic always runs.
+>
+> **That is the answer if anyone asks whether the demo was staged.** Nothing pre-computed reaches a user without passing the same validation a live answer passes, in the same code, against the same corpus.
+
+It also makes a hand-written answer **structurally impossible rather than merely forbidden**. Entries are raw provider envelopes copied out of recorded fixtures; there is nowhere to put prose we wrote, and anything hand-authored would have to survive validation it was never produced by. `demo-cache-build.ts` cannot reach the network at all — recording is a separate, deliberate script — so the build step can never quietly become a way to generate content.
+
+**Invalidation is a whole-file gate**, not per-entry: corpus version, provider, both models, both prompt versions, both schema versions. Any mismatch and the entire file is refused, loudly, at boot, and every question goes live. Whole-file because partial validity is the harder thing to reason about — a cache that is 80% valid fails on exactly the entries nobody checked. `/api/health` reports `demoCache` so the state is checkable rather than assumed.
+
+⚠️ **The four visible chips are SIX distinct questions.** A chip sends its text in the *shell* language, so flipping the UR/EN toggle changes what it sends. Two of the six trip the ratchet and are deliberately **not** cached — they already cost zero requests, so caching them would add entries that do nothing. `shell:check` asserts every chip string appears in the curated list, so rewording a chip without rebuilding fails the build instead of silently leaving the demo uncovered.
+
+#### Why the 37 adversarial fixtures are NOT wired into it
+
+They would cost nothing to allowlist, and someone will eventually notice them sitting there and wonder.
+
+**The distinction is between what we INVITE and what a judge CHOOSES.** The chips are our invitation, so pre-seeding them is demo preparation. The adversarial questions are what a judge thinks of themselves, and those are the actual test — they must reach the live system, or a pass proves nothing about the deployment in their hands. The more of the demo is a recording, the less any of it tells them.
+
+#### The diagnostic may not lie about this either
+
+`servedFrom: live | cache | mixed | none` rides on every 200. **Not user-facing**, deliberately: a cached answer is the same claim, validated by the same code against the same corpus, so labelling it would imply a distinction that does not exist.
+
+It is on the wire for the one case where it matters — **a provider outage with the cache serving the chips leaves the app looking healthy while the system is not.** Not telling a user is fine; being unable to tell *ourselves* would be us misreporting our own state, which is the thing §5.6 exists to forbid.
+
+⚠️ `none` is a distinct value from `live` on purpose: the ratchet consults no model at all, and logging that as "the provider answered" would be false. **This was wrong once already** — `fromCache` was threaded only through the `in_corpus` return, so a cached *refusal* reported `live`. Three of four rubric behaviours are refusals, so the diagnostic was wrong on the majority of the paths that matter. A test pins each one.
 - **Invalidation is free** — `corpus_version` and `prompt_version` are in the key, so a corpus sync or prompt edit invalidates automatically. No purge logic.
 
 ---
