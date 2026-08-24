@@ -523,7 +523,23 @@ The three instances, all the same shape:
 
 Note what they have in common: **in every case the happy path was genuinely fine.** F8 returned a refusal, `servedFrom` was right on `in_corpus`, the cache file really was committed. Each bug lived in the branch nobody would spot-check, wearing the credibility of the branch everybody would.
 
-The working rule, and it generalises the "check `reason`, not just `mode`" bullet above rather than sitting beside it: **anything that reports on our own state — a fixture status, a diagnostic field, a health field, an artifact's presence — needs a test per branch, including branches that are currently unreachable.** The demo cache is switched off and `shell:check` still validates its gate against the live corpus, precisely because a lever nobody pulls is where this rule bites next.
+The working rule, and it generalises the "check `reason`, not just `mode`" bullet above rather than sitting beside it: **anything that reports on our own state — a fixture status, a diagnostic field, a health field, an artifact's presence — needs a test per branch, including branches that are currently unreachable.**
+
+#### ⚠️ The sharpest form: a DISABLED feature's failure modes are invisible because nothing exercises them
+
+The `demo-cache.json` case is the worst of the three and deserves its own statement, because the property that made it dangerous is one that *grows* over time rather than being caught by use.
+
+**It was inert.** The cache was off, so nothing read the file, so nothing could notice the file never arrived. Every signal available said healthy: committed, not gitignored, not in `.vercelignore`, tests green, `/api/health` returning 200. The only way to learn the truth was to look at a field nobody had a reason to look at.
+
+And the failure it was queued up to produce is the specific one a lever must never produce: **`DEMO_CACHE=on` would have reported the cache enabled and served nothing** — at the exact moment we reached for it, which by definition is a moment of pressure, with a judge waiting. A lever that silently does nothing is worse than no lever, because we would have stopped looking for another answer.
+
+So, as a rule:
+
+> **A feature that is switched off is not a feature that is working and idle. It is a feature in an untested state, and the longer it stays off the more true that becomes.** Anything kept as an emergency lever needs its readiness checked by something that runs *while it is off* — otherwise "we have a fallback" is a belief, not a fact.
+
+Concretely, and this is why the guard is where it is: the demo cache is disabled, and **`shell:check` still validates its gate against the live corpus and both prompt versions on every `npm run check`**. Not because anything reads it today — because the day something does is the day we cannot afford to find out.
+
+⚠️ **This applies to the OpenRouter fallback too** (§5.6), which is in exactly the same position and has a weaker guard: verified once on 2026-08-12 and untouched since, against a `:free` roster that rotates and delists without notice. Its readiness is currently a belief.
 
 **Optional, and worth it:** run the redundant ruling-check *only* in record mode, where we are spending requests deliberately. Disagreement between it and the router is a signal the router prompt needs work — redundancy where it is cheap, absent where it is expensive.
 
@@ -1108,6 +1124,8 @@ Chip 4 exposed a rendering bug that was always there: the user's own echoed mess
 🚫 **This is not language detection and does not reopen the `"he"` bug class (§5.4).** That bug was a weak roman-Urdu marker in *language* detection deciding an English question was Urdu. Script→direction cannot make that error: roman-Urdu is Latin script, so it renders LTR, which is what the user typed. Answer language is still decided server-side by `detectLanguage`, untouched.
 
 ⚠️ The character class is literal UTF-8, and **a broken class fails OPEN** — everything renders LTR, silently, invisible until someone looks at a device. `shell:check` reads the line back out of `theme.ts` and asserts six cases; the guard was itself verified by deliberately dropping the presentation-forms range and watching it fail.
+
+🚫 **Never reuse that character class to decide what LANGUAGE a string is in.** It answers *"does this contain Arabic script at all"*, which is exactly right for direction and exactly wrong for language — **ﷺ (U+FDFA) is in Arabic Presentation Forms-A, so every English title in this corpus matches it.** A rehearsal validator built on this class flagged all five English citations of a correct answer as script-mismatched: a false failure in the instrument, on a run whose whole purpose was checking the system, and briefly indistinguishable from a real §5.3 breach. Same class, right in `theme.ts` and wrong in a validator, because the questions differ. For language, compare against the corpus's own `en`/`ur` blocks — exact, and what §5.3 check 3 already does.
 
 **`scripts/shell-check.mjs` exists because `mobile/` is unreachable by both the typechecker and the test runner** — the API tsconfig excludes it and the runner globs `api/tests/*.test.ts`. Importing a mobile module from a test was tried and reverted: `module: nodenext` takes module kind from the nearest `package.json`, and adding `"type": "module"` to `mobile/package.json` to satisfy a test would change how Metro resolves the app. So these invariants are checked from outside, by reading the files as text.
 

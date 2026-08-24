@@ -89,6 +89,23 @@ console.log(`emptyBody.ur : ${ur === null ? "(not found)" : ur.includes(wantUr) 
  * English metrics — losing the ﷺ leading fix (§12.0) on the one element that is
  * a verbatim echo of what the judge typed. Invisible until someone looks at a
  * device.
+ *
+ * ⚠️ DO NOT REUSE `ARABIC_SCRIPT` TO DECIDE WHAT LANGUAGE A STRING IS IN.
+ *
+ * It answers "does this contain Arabic script at all", which is the right
+ * question for direction — an Urdu string always does, a roman-Urdu string
+ * never does, and both render correctly as a result.
+ *
+ * It is the WRONG question for "is this text in language X", and the
+ * difference is not academic: ﷺ (U+FDFA) lives in Arabic Presentation Forms-A,
+ * so **every English title in this corpus matches it**. A rehearsal validator
+ * built on this class flagged all five English citations of a perfectly good
+ * answer as script-mismatched — a false failure in the instrument, on a run
+ * whose entire purpose was checking the system. The same class, correct here
+ * and wrong there, because the questions differ.
+ *
+ * If you need the language of a string, compare it against the corpus's own
+ * `en`/`ur` blocks. That is exact, and it is what §5.3 check 3 already does.
  */
 const classMatch = theme.match(/const ARABIC_SCRIPT = (\/\[[^\n]*?\]\/[a-z]*)\s*;/);
 if (!classMatch) {
@@ -176,17 +193,41 @@ for (const [name, text] of chips) {
  */
 const demoCache = JSON.parse(readFileSync(join(root, "demo-cache.json"), "utf8"));
 const cacheEntries = Object.keys(demoCache.entries ?? {}).length;
-const gateOk = demoCache.gate?.corpusVersion === corpus.corpusVersion;
-console.log(
-  `\ndemo cache   : ${cacheEntries} entries, corpus ${demoCache.gate?.corpusVersion} ` +
-    `${gateOk ? "✔ matches corpus.json" : `✗ corpus.json is ${corpus.corpusVersion}`} (feature OFF by design)`
-);
+
+// The gate compares eight fields at boot; the three that actually move during
+// development are the corpus version and the two prompt versions. A prompt bump
+// is the likeliest way this goes stale, because it happens for reasons that
+// have nothing to do with the cache — so it is the one to catch here rather
+// than at boot, where nobody is watching while the feature is off.
+const prompts = readFileSync(join(root, "api", "src", "prompts.ts"), "utf8");
+const literal = (name) => prompts.match(new RegExp(`${name}\\s*=\\s*"([^"]+)"`))?.[1] ?? null;
+// Scoped to the PROMPT_VERSION_BY_OP block. A bare /answer:\s*"…"/ would also
+// match SCHEMA_VERSION_BY_OP's `answer` a few lines below, and would start
+// reading the wrong one the day those two blocks swap order.
+const answerPrompt =
+  prompts.match(/PROMPT_VERSION_BY_OP\s*=\s*\{[^}]*answer:\s*"([^"]+)"/)?.[1] ?? null;
+
+const expected = {
+  corpusVersion: corpus.corpusVersion,
+  classifyPromptVersion: literal("PROMPT_VERSION"),
+  answerPromptVersion: answerPrompt,
+};
+
+console.log(`\ndemo cache   : ${cacheEntries} entries (feature OFF by design — checked anyway)`);
 if (!cacheEntries) failures.push("demo-cache.json has no entries — the lever would do nothing if pulled");
-if (!gateOk) {
-  failures.push(
-    `demo-cache.json was built against corpus ${demoCache.gate?.corpusVersion}, corpus.json is now ` +
-      `${corpus.corpusVersion} — the gate would refuse the whole file. Re-run demo-cache:build.`
-  );
+for (const [field, want] of Object.entries(expected)) {
+  if (want === null) {
+    failures.push(`could not read ${field} out of api/src/prompts.ts`);
+    continue;
+  }
+  const got = demoCache.gate?.[field];
+  console.log(`  ${got === want ? "✔" : "✗"} ${field.padEnd(23)} ${got}${got === want ? "" : `  (runtime: ${want})`}`);
+  if (got !== want) {
+    failures.push(
+      `demo-cache.json gate.${field} is "${got}" but the runtime is "${want}" — the gate would refuse ` +
+        `the WHOLE file at boot, so the lever is dead. Re-record and re-run demo-cache:build.`
+    );
+  }
 }
 
 if (failures.length) {
