@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v2",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "What was the Prophet's ﷺ daily routine?",
+    "recordedAt": "2026-08-24T21:26:58.746Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad ﷺ had a routine that included both domestic responsibilities and spiritual practices. At home, he would assist with household chores, helping his family with various tasks. When the time for prayer arrived, he would leave to perform it. He also maintained his personal appearance, combing his hair, though not daily, and sometimes applying dye to it. In his public life, he would visit graves, which served as a reminder of the afterlife and helped to detach him from worldly concerns. When he walked, he would lean slightly forward, moving with dignity and covering ground swiftly despite his unhurried pace.",
+      "citations": [
+        "67458fa0553c8f001f0bd333",
+        "674a78acac734b001f10841b",
+        "675032d82b6910001ffbd4ab",
+        "67503cdf2b6910001ffbdd13",
+        "6756bc9c9646f05df740b364"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The Prophet Muhammad ﷺ had a routine that included both domestic responsibilities and spiritual practices. At home, he would assist with household chores, helping his family with various tasks. When the time for prayer arrived, he would leave to perform it. He also maintained his personal appearance, combing his hair, though not daily, and sometimes applying dye to it. In his public life, he would visit graves, which served as a reminder of the afterlife and helped to detach him from worldly concerns. When he walked, he would lean slightly forward, moving with dignity and covering ground swiftly despite his unhurried pace.\",\n  \"citations\": [\n    \"67458fa0553c8f001f0bd333\",\n    \"674a78acac734b001f10841b\",\n    \"675032d82b6910001ffbd4ab\",\n    \"67503cdf2b6910001ffbdd13\",\n    \"6756bc9c9646f05df740b364\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 2204,
+        "candidatesTokenCount": 265,
+        "totalTokenCount": 2469,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 2204
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "H7eMatSlDqbYvdIP_9Hy-AY"
+    }
+  }
+}

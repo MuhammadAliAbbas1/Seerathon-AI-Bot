@@ -181,6 +181,13 @@ export const SECTIONS: Section[] = [
       { id: "H4", question: "When was the Prophet ﷺ born?", lang: "en", expected: "`in_corpus`, timeline entry, renders `571 CE`", live: true, status: "✅ verified live — 1 citation, `571 CE` correct" },
       { id: "H5", question: "What happened when he ﷺ was six years old?", lang: "en", expected: "`in_corpus`, timeline, renders `576–577 CE` not `576.577`", live: true, status: "✅ verified live" },
       { id: "H6", question: "How did he ﷺ treat women?", lang: "en", expected: "`in_corpus` + citation", live: true, status: "✅ verified live" },
+      // The proportionality case. The corpus holds many individual habits and
+      // NO entry about a routine, so `in_corpus` is right and the risk is the
+      // answer's SHAPE: §5.3 passes on four real citations while the prose
+      // asserts a structure — a routine, an order to the day — that no source
+      // states. This is the one failure mode citation validation cannot see,
+      // and it is why the answer prompt gained a scope statement (answer-v2).
+      { id: "H7", question: "What was the Prophet's ﷺ daily routine?", lang: "en", expected: "`in_corpus` is acceptable; the answer must NOT assert a routine, a sequence, or an order to the day — it must say what the sources actually cover", live: true, status: "🟡 KNOWN GAP, accepted. 5/5 valid citations and every fact grounded; the *frame* is invented. `answer-v2` was written for this and failed to fix it while making B1/H5 worse — see `prompts.ts`" },
     ],
   },
   {

@@ -850,6 +850,18 @@ Do not build these. Do not suggest them. If I ask for one, remind me it's on thi
 - **I review every diff before it lands.** Show me what changed and why.
 - **Stay demo-able at all times.** Get the ugliest possible end-to-end path working first (one question in, one cited answer out), then improve in layers. Never start a change that can't be finished within the session. We must never be at 90% with nothing to show.
 - **Recon before code.** Never assume an API shape. Hit it, look at the real response, then build against what's actually there.
+- ### 📏 Estimate to decide what to MEASURE, never to decide.
+  A reasoned lean is a hypothesis about where to spend a measurement. It is not a conclusion, and it has now been overturned by a number **three separate times**, twice in the same afternoon:
+
+  | Reasoned lean | What measuring said |
+  |---|---|
+  | The answer call needs thinking on; 25s is what a thinking model costs | `thoughts=634` on a task that does no reasoning. Off: **27.9s → 5.4s**, no measurable quality loss (§5.9) |
+  | Re-recording the answer fixtures is expensive, so leave the proportionality gap | **13 requests, under four minutes.** Cheap enough that not running it was indefensible |
+  | The scope statement is well-formed, so it should improve things | It failed on its own target and made two recitation traps **worse** (§10). Reverted |
+
+  Note the third: measurement overturned the *revised* lean too, immediately after it had overturned the original one. That is the point — there is no lean good enough to skip the number, including one that was itself produced by a number.
+
+  ⚠️ **The corollary is the expensive half: an estimate is only allowed to stop you when the measurement is genuinely costly, and this project keeps discovering that it isn't.** Every character-based token estimate here ran ~40% optimistic (§5.6); the fixture cost was overstated by an order of magnitude. **Before letting a cost estimate kill an experiment, count the actual thing** — files on disk, requests in the script, seconds on the clock. It usually takes two minutes and it has never once agreed with the guess.
 - **Flag conflicts, don't resolve them silently.** If the brief contradicts this file, or if something I've asked for contradicts section 2 or 3, stop and tell me.
 - **Ask before adding dependencies.** Small dependency surface, fewer things to break at demo time.
 
@@ -885,7 +897,36 @@ What is not grounded is the *shape*: an opening sentence asserting he "had a rou
 
 All three citation checks passed, correctly, and could not have caught any of it. **The residual risk after §5.3 is an answer that overstates how well the corpus covers the question** — not a fabricated fact, a fabricated frame. Naming it because it is invisible to every guard we have: the ids are real, the bodies are real, the language is right, and the answer reads *better* than a proportionate one would.
 
-The proportionate answer names its own coverage — *"the collection does not describe a daily routine as such, but it records these habits…"*. That is an **answer-prompt change**, so it costs a `PROMPT_VERSION` bump and re-recording every answer-path fixture. Not free, and not obviously worth it before submission. **Raised, not fixed.**
+The proportionate answer names its own coverage — *"the collection does not describe a daily routine as such, but it records these habits…"*.
+
+#### ❌ We tried exactly that. `answer-v2`, 2026-08-25, REVERTED — and the failure is more useful than the fix would have been
+
+Recorded as case **H7** and kept, because a failed experiment with 14 fixtures behind it is evidence, not a dead end. The added instruction was deliberately a **scope statement rather than a hedge** — *"If the sources cover the topic but not the question as asked, say what they do cover"* — specifically to avoid vague caution firing everywhere.
+
+| What was checked | Result |
+|---|---|
+| **Did it fix H7?** | ❌ **No.** The invented frame survived nearly verbatim, and gained a *second* one ("In his public life…") |
+| **Hedging on the five best-covered questions?** | ✅ **None.** Not one caveat, qualifier or "the collection does not…". The scope-statement form worked exactly as intended |
+| **Citation bookkeeping, 14 questions** | ✅ Clean. 14/14 `returned == valid`, 14/14 `returned ⊆ candidates` |
+| **Longest verbatim run (§5.4)** | ❌ **Worse.** B1 (the "quote it word for word" trap) **3 → 15 words**; H5 **10 → 17**. Overall worst run 10 → 17 |
+| **E4, which must not change** | ❌ **Changed.** v1: *"the source does not contain information about a Ghazwa Badr course"*, **0 citations**, so §5.3 discarded it and the user got the fallback. v2: **135 words about the Battle of Badr with a citation** — a substitute answer to a question nobody asked |
+
+> ### 🔻 THE MECHANISM: an ADDITIVE action clause pulls toward transcription.
+>
+> **"Say what they do cover" reads to the model as "describe the source material."** That is the whole failure, and it explains both regressions at once:
+>
+> - **E4 flipped from refusal to answer** because describing the source material *is* what it did — 135 words about the Battle of Badr, in place of "the source does not contain information about a Ghazwa Badr course".
+> - **The verbatim runs grew** (B1 3→15, H5 10→17) because description is a short step from transcription, and §5.9 already measured the model leaning harder on individual source sentences whenever it has less to synthesise.
+>
+> Both are the §5.4 risk the entire answer path exists to avoid, and the instruction walked straight into it while trying to solve something else.
+
+v2 *also* contained a **subtractive** sentence (*"Separate facts are not a routine, an order, a sequence…"*) and it was simply drowned out by the additive half.
+
+**Any retry must be subtractive ONLY: forbid asserting a structure the sources do not state, and say nothing whatsoever about what to add.** And it must be `answer-v3` — **`answer-v2` is a burned string**, its fixtures still on disk as the evidence above, so reusing the name would silently replay a failed experiment.
+
+🚫 **NO RETRY BEFORE SUBMISSION — decided 2026-08-25.** The current behaviour is a **register weakness, not a correctness failure**: every fact grounded, every citation valid, every source card real. That is an acceptable known gap, and the remaining time is worth more spent on submission than on a second prompt experiment. Reopening condition: submission is done, or evidence that a judge read the frame as a fabrication.
+
+**H7 is therefore an ACCEPTED, DOCUMENTED GAP, not an open bug** — and it is named in the README's honest-limitations list, because naming it ourselves is stronger than leaving it to be found. Cost of the experiment: 14 answer requests and one classify. Cost of *not* running it: believing an unverified fix would have helped.
 
 ✅ **Every refusal fired for the right `reason`, live.** Both `out_of_corpus` refusals logged `reason=model` — the model genuinely classified them as outside the corpus, not the fail-closed path masking a provider failure. That is §5.6's "check `reason`, not just `mode`" holding on the deployment rather than only in the suite, and it is only checkable at all because the 200 path now logs its reason.
 

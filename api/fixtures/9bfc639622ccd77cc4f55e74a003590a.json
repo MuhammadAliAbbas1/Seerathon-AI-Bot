@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v2",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "What was the Prophet's ﷺ character like?",
+    "recordedAt": "2026-08-24T21:19:13.488Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad's character was marked by profound compassion, mercy, and justice. He never sought personal revenge, always forgiving those who wronged him, even when he endured severe hardship, such as being stoned in Ta'if or injured in battle. His concern extended to his entire community, as he would worry about potential punishments for them and pray for their guidance and ease. He showed particular gentleness towards women, shortening prayers if he heard a child crying and advising companions to be gentle with women during travel. He also demonstrated immense mercy towards disbelievers, consistently praying for their guidance rather than cursing them, even after they inflicted harm upon him. Furthermore, he upheld justice strictly, declaring that he would apply the law equally to all, even his own daughter, and allowed companions to seek retribution from him if he inadvertently caused them harm.",
+      "citations": [
+        "672b3e8ed458540020750eab",
+        "672c82436fa080001f6a18fc",
+        "672c93c01c9a6f001f8eec39",
+        "672c8b7d1c9a6f001f8eea5c",
+        "67347128bd8a1c00203035a7"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The Prophet Muhammad's character was marked by profound compassion, mercy, and justice. He never sought personal revenge, always forgiving those who wronged him, even when he endured severe hardship, such as being stoned in Ta'if or injured in battle. His concern extended to his entire community, as he would worry about potential punishments for them and pray for their guidance and ease. He showed particular gentleness towards women, shortening prayers if he heard a child crying and advising companions to be gentle with women during travel. He also demonstrated immense mercy towards disbelievers, consistently praying for their guidance rather than cursing them, even after they inflicted harm upon him. Furthermore, he upheld justice strictly, declaring that he would apply the law equally to all, even his own daughter, and allowed companions to seek retribution from him if he inadvertently caused them harm.\",\n  \"citations\": [\n    \"672b3e8ed458540020750eab\",\n    \"672c82436fa080001f6a18fc\",\n    \"672c93c01c9a6f001f8eec39\",\n    \"672c8b7d1c9a6f001f8eea5c\",\n    \"67347128bd8a1c00203035a7\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 2839,
+        "candidatesTokenCount": 318,
+        "totalTokenCount": 3157,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 2839
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "TbWMavLoF9vQvdIPrprukAs"
+    }
+  }
+}

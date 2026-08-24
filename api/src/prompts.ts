@@ -24,6 +24,49 @@ export const SCHEMA_VERSION = "route-v1";
  */
 export const PROMPT_VERSION_BY_OP = {
   classify: PROMPT_VERSION,
+  /**
+   * ⚠️ STILL v1. `answer-v2` WAS TRIED ON 2026-08-25 AND REVERTED — and the
+   * string is now BURNED. If you bump this, go to `answer-v3`.
+   *
+   * v2 added a scope statement: *"If the sources cover the topic but not the
+   * question as asked, say what they do cover."* Its target was the
+   * proportionality gap (case H7) — an answer that invents a structure the
+   * corpus never states. It failed on three counts and the fixtures are still
+   * on disk under their v2 keys as the evidence:
+   *
+   *  1. It did not fix H7. The invented frame survived verbatim, and gained a
+   *     second one ("In his public life…").
+   *  2. It made the recitation traps WORSE. B1's longest verbatim run went
+   *     3 → 15 words, H5's 10 → 17. "Say what they do cover" is an
+   *     instruction to describe, and describing pulls toward transcription —
+   *     the §5.4 risk the whole answer path is built to avoid.
+   *  3. It changed E4, which must not change. v1 answered "the source does
+   *     not contain information about a Ghazwa Badr course" with 0 citations,
+   *     so §5.3 discarded it and the user got the fallback. v2 returned 135
+   *     words about the Battle of Badr with a citation — a substitute answer
+   *     to a question nobody asked.
+   *
+   * THE MECHANISM, because a future attempt will be tempted by the same
+   * wording: the action clause was ADDITIVE. "Say what they do cover" reads
+   * to the model as "describe the source material" — which is why E4 flipped
+   * from a refusal into 135 words about the battle, and why the verbatim runs
+   * grew, description being a short step from transcription. Both are the
+   * §5.4 risk this prompt exists to avoid.
+   *
+   * A subtractive sentence — "Separate facts are not a routine, an order, a
+   * sequence…" — was also in v2 and was drowned out by the additive half. Any
+   * retry must be SUBTRACTIVE ONLY: forbid asserting a structure the sources
+   * do not state, and say nothing at all about what to add.
+   *
+   * 🚫 No retry before submission (decided 2026-08-25). The current behaviour
+   * is a register weakness, not a correctness failure — every fact grounded,
+   * every citation valid — and it is named in the README's limitations.
+   *
+   * What v2 got RIGHT, and worth keeping if this is retried: it stayed quiet
+   * on well-covered questions. Not one of the five best-covered answers gained
+   * a hedge or a caveat. The scope-statement form was correct; the action it
+   * asked for was not.
+   */
   answer: "answer-v1",
 } as const;
 

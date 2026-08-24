@@ -106,7 +106,7 @@ npm install
 npm run check
 ```
 
-`npm run check` runs 138 tests plus three drift checks, **offline, in about two seconds, spending zero API quota.** Model responses are recorded fixtures replayed from `api/fixtures/`, so the adversarial suite is cheap enough to run before every commit — which is the point, because a suite that costs quota gets skipped exactly when you are rushing.
+`npm run check` runs 154 tests plus three drift checks, **offline, in about two seconds, spending zero API quota.** Model responses are recorded fixtures replayed from `api/fixtures/`, so the adversarial suite is cheap enough to run before every commit — which is the point, because a suite that costs quota gets skipped exactly when you are rushing.
 
 Only reproducible outcomes are ever recorded as fixtures. Transient failures — quota, timeouts, transport, any HTTP status — must be re-run, because a recorded 503 once sat in this suite replaying in 2ms and reporting a pass for a case that had never actually been tested.
 
@@ -114,12 +114,13 @@ Only reproducible outcomes are ever recorded as fixtures. Transient failures —
 
 ## Honest limitations
 
+- **Citation validation guarantees provenance, not proportionality.** Every citation is checked three ways before an answer is rendered, so a fabricated or hollow reference cannot reach the screen. What that cannot check is the *shape* of the answer. Asked something the corpus covers only obliquely — *"what was his daily routine?"*, where the collection holds many individual habits and no entry about a routine — the bot can present separately-sourced facts inside a frame the corpus never asserts. Every fact in such an answer is grounded and every source card real; the connective tissue between them is the model's. A prompt change aimed squarely at this was written, tested against 14 recorded questions, and reverted: it failed to fix the frame, made the bot reproduce source wording five times more on one case, and turned a correct refusal into an answer. Documented rather than papered over.
 - **Android only.** No iOS build.
 - **The Urdu register has not been reviewed by a native speaker.** The mechanism is sound — text is selected from the corpus, never translated — but the shell copy written for this app is unaudited, and at least one word choice in the refusal labels is still an open question.
 - **Rate limiting is per-instance, in-process.** It stops one person or one script hammering the endpoint. It does **not** stop a distributed attacker, and it resets on cold start. That is an accepted trade, not an oversight: fixing it properly means adding a datastore and a service for a threat model this project does not have. The real ceiling is the provider's free-tier quota.
 - **One adversarial case is unconstructible.** It needs a corpus entry with body text in only one language; the published corpus has none, so it is recorded as unconstructible rather than quietly skipped.
 - **No multi-turn memory.** Each question is answered on its own, which keeps the router's input predictable.
-- **The demo has not been rehearsed end to end.** Known gap, honestly the largest one.
+- **The demo has been rehearsed against the backend, not through the app.** A paced run of seven questions against the live deployment covered all four required behaviours in both languages, with every refusal firing for the right internal reason and every citation re-validated independently. The same run through the installed APK on a physical device is the remaining gap.
 
 ---
 

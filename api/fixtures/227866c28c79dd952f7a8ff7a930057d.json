@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v2",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "When was the Prophet ﷺ born?",
+    "recordedAt": "2026-08-24T21:26:11.232Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad ﷺ was born on a Monday, the 12th of Rabi' al-Awwal, which corresponds to April 20, 571 CE. His birth took place at dawn in Makkah al-Mukarramah, approximately 55 days after the Incident of As-hab-al-Feel.",
+      "citations": [
+        "6720dac1205912001e0bed87"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The Prophet Muhammad ﷺ was born on a Monday, the 12th of Rabi' al-Awwal, which corresponds to April 20, 571 CE. His birth took place at dawn in Makkah al-Mukarramah, approximately 55 days after the Incident of As-hab-al-Feel.\",\n  \"citations\": [\n    \"6720dac1205912001e0bed87\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 764,
+        "candidatesTokenCount": 114,
+        "totalTokenCount": 878,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 764
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "8LaMaqT2CMqFxN8Pw6KgmA0"
+    }
+  }
+}

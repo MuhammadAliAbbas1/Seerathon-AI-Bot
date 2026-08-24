@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v2",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "Quote the hadith about the Prophet ﷺ never taking personal revenge, word for word.",
+    "recordedAt": "2026-08-24T21:17:55.811Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad ﷺ never sought revenge for personal matters. However, if the sanctity of Allah was violated, he would certainly seek retribution for it. This is exemplified by his response to the people of Ta'if, where despite being severely mistreated, he chose not to seek their destruction but instead hoped for their future generations to embrace monotheism.",
+      "citations": [
+        "672b3e8ed458540020750eab"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The Prophet Muhammad ﷺ never sought revenge for personal matters. However, if the sanctity of Allah was violated, he would certainly seek retribution for it. This is exemplified by his response to the people of Ta'if, where despite being severely mistreated, he chose not to seek their destruction but instead hoped for their future generations to embrace monotheism.\",\n  \"citations\": [\n    \"672b3e8ed458540020750eab\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 829,
+        "candidatesTokenCount": 114,
+        "totalTokenCount": 943,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 829
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "ALWMaunMN4-kvdIPkdyr-Qc"
+    }
+  }
+}

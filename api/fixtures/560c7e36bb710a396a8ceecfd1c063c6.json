@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v2",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "What is covered in the Ghazwa Badr course?",
+    "recordedAt": "2026-08-24T21:18:57.113Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The provided source describes the causes and initial events leading up to the Battle of Badr. It explains that Badr was a village with a well, named after its owner. The battle was triggered by earlier skirmishes and the death of a disbeliever, as well as the Prophet Muhammad's ﷺ suggestion to intercept a wealthy Quraysh caravan returning from Syria to disrupt their trade and encourage peace. The Muslim army, consisting of about 313 companions (60 Muhajireen and the rest Ansar), set out with minimal preparation. The Makkans, upon learning of the Muslim movement, mobilized a much larger, well-equipped army of 1,000 troops. Abu Sufyan, leading the caravan, diverted its route to safety and sent word to the Quraysh that there was no longer a need to fight, though some Quraysh leaders insisted on proceeding.",
+      "citations": [
+        "672e189ce8c7280020a73b59"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The provided source describes the causes and initial events leading up to the Battle of Badr. It explains that Badr was a village with a well, named after its owner. The battle was triggered by earlier skirmishes and the death of a disbeliever, as well as the Prophet Muhammad's ﷺ suggestion to intercept a wealthy Quraysh caravan returning from Syria to disrupt their trade and encourage peace. The Muslim army, consisting of about 313 companions (60 Muhajireen and the rest Ansar), set out with minimal preparation. The Makkans, upon learning of the Muslim movement, mobilized a much larger, well-equipped army of 1,000 troops. Abu Sufyan, leading the caravan, diverted its route to safety and sent word to the Quraysh that there was no longer a need to fight, though some Quraysh leaders insisted on proceeding.\",\n  \"citations\": [\n    \"672e189ce8c7280020a73b59\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 2019,
+        "candidatesTokenCount": 228,
+        "totalTokenCount": 2247,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 2019
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "PbWMaoTZIvXinsEPmtjR6Q8"
+    }
+  }
+}

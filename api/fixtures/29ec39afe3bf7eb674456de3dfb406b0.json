@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v2",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "How did he ﷺ treat women?",
+    "recordedAt": "2026-08-24T21:26:41.071Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad ﷺ treated women with great compassion, mercy, and respect, emphasizing the importance of their rights. He taught that kind treatment of women is an essential part of the Sunnah and that men are obligated to fulfill their needs and treat them with good manners. His own life served as a practical example; he would shorten prayers if he heard a child crying, out of concern for the mother, and he advised gentleness towards women, referring to them as \"glass vessels.\" He also dedicated a special day to women to provide them with sermons and advice, and he encouraged men to fear Allah concerning women, reminding them that women are taken by the trust of Allah.",
+      "citations": [
+        "672c93c01c9a6f001f8eec39",
+        "672c9bff1c9a6f001f8eed57"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The Prophet Muhammad ﷺ treated women with great compassion, mercy, and respect, emphasizing the importance of their rights. He taught that kind treatment of women is an essential part of the Sunnah and that men are obligated to fulfill their needs and treat them with good manners. His own life served as a practical example; he would shorten prayers if he heard a child crying, out of concern for the mother, and he advised gentleness towards women, referring to them as \\\"glass vessels.\\\" He also dedicated a special day to women to provide them with sermons and advice, and he encouraged men to fear Allah concerning women, reminding them that women are taken by the trust of Allah.\",\n  \"citations\": [\n    \"672c93c01c9a6f001f8eec39\",\n    \"672c9bff1c9a6f001f8eed57\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 1224,
+        "candidatesTokenCount": 203,
+        "totalTokenCount": 1427,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1224
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "DbeMatmFK5DmnsEPlqGG4As"
+    }
+  }
+}

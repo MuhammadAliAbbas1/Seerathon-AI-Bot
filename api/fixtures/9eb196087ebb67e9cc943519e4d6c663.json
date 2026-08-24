@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v2",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "What did the Prophet ﷺ look like?",
+    "recordedAt": "2026-08-24T21:27:35.831Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad ﷺ was of medium height, neither very tall nor very short, though he sometimes appeared taller than those around him. His physique was well-proportioned, with a broad and expansive chest that was smooth and even. A fine line of hair extended from his upper chest to his navel, but his chest and abdomen were otherwise hairless and equal in prominence. His hair was neither very curly nor completely straight, falling between his ears and shoulders, and he had only a few white hairs in his head and beard. His blessed face was somewhat round and radiant, described as more beautiful than the full moon, with a fair complexion that had a desirable reddish tint, giving him a luminous appearance.",
+      "citations": [
+        "674ed107f8a58b001f4e554f",
+        "674ed66cf8a58b001f4e55e6",
+        "67501dcf2b6910001ffbd06a",
+        "675021362b6910001ffbd15f",
+        "675024d62b6910001ffbd202"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The Prophet Muhammad ﷺ was of medium height, neither very tall nor very short, though he sometimes appeared taller than those around him. His physique was well-proportioned, with a broad and expansive chest that was smooth and even. A fine line of hair extended from his upper chest to his navel, but his chest and abdomen were otherwise hairless and equal in prominence. His hair was neither very curly nor completely straight, falling between his ears and shoulders, and he had only a few white hairs in his head and beard. His blessed face was somewhat round and radiant, described as more beautiful than the full moon, with a fair complexion that had a desirable reddish tint, giving him a luminous appearance.\",\n  \"citations\": [\n    \"674ed107f8a58b001f4e554f\",\n    \"674ed66cf8a58b001f4e55e6\",\n    \"67501dcf2b6910001ffbd06a\",\n    \"675021362b6910001ffbd15f\",\n    \"675024d62b6910001ffbd202\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 1958,
+        "candidatesTokenCount": 290,
+        "totalTokenCount": 2248,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1958
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "RLeMaqrAB4jSxN8Pp7_KqQk"
+    }
+  }
+}

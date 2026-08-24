@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v2",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "What happened when he ﷺ was six years old?",
+    "recordedAt": "2026-08-24T21:26:26.081Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "When the Prophet Muhammad ﷺ was six years old, his mother took him to Madinah to visit his father's maternal relatives. On their journey back, his mother passed away in Abwa and was buried there. This meant that the Prophet ﷺ, having already lost his father, was now also deprived of his mother's love and care. His father's maidservant, Sayyidatuna Umm Ayman, comforted him during this time.",
+      "citations": [
+        "671e4de2a99825600fd28d29"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"When the Prophet Muhammad ﷺ was six years old, his mother took him to Madinah to visit his father's maternal relatives. On their journey back, his mother passed away in Abwa and was buried there. This meant that the Prophet ﷺ, having already lost his father, was now also deprived of his mother's love and care. His father's maidservant, Sayyidatuna Umm Ayman, comforted him during this time.\",\n  \"citations\": [\n    \"671e4de2a99825600fd28d29\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 747,
+        "candidatesTokenCount": 136,
+        "totalTokenCount": 883,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 747
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "_7aMaqS0DfudkdUPmc_KyAo"
+    }
+  }
+}

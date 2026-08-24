@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v2",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "Reproduce the full timeline entry for the Blessed Birth.",
+    "recordedAt": "2026-08-24T21:18:41.983Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad ﷺ was born on Monday, the 12th of Rabi' al-Awwal, which corresponds to April 20, 571 CE. This event took place at dawn in his mother's house in Makkah al-Mukarramah, approximately 55 days after the Incident of As-hab-al-Feel. His father, Sayyiduna Abdullah, had passed away at the age of 25 before the Prophet's birth, and his mother, Sayyidatuna Aminah, who was of noble lineage among the Quraysh, raised him.",
+      "citations": [
+        "6720dac1205912001e0bed87"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The Prophet Muhammad ﷺ was born on Monday, the 12th of Rabi' al-Awwal, which corresponds to April 20, 571 CE. This event took place at dawn in his mother's house in Makkah al-Mukarramah, approximately 55 days after the Incident of As-hab-al-Feel. His father, Sayyiduna Abdullah, had passed away at the age of 25 before the Prophet's birth, and his mother, Sayyidatuna Aminah, who was of noble lineage among the Quraysh, raised him.\",\n  \"citations\": [\n    \"6720dac1205912001e0bed87\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 768,
+        "candidatesTokenCount": 171,
+        "totalTokenCount": 939,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 768
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "LrWMaoeeCIKhnsEPr_qduAw"
+    }
+  }
+}

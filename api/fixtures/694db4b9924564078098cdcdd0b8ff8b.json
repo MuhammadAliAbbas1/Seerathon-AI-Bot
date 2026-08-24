@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "op": "classify",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "promptVersion": "router-v1",
+    "schemaVersion": "route-v1",
+    "language": "en",
+    "question": "What was the Prophet's ﷺ daily routine?",
+    "recordedAt": "2026-08-24T21:26:56.819Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "mode": "in_corpus",
+      "candidateIds": [
+        "67458fa0553c8f001f0bd333",
+        "674a78acac734b001f10841b",
+        "675032d82b6910001ffbd4ab",
+        "67503cdf2b6910001ffbdd13",
+        "6756bc9c9646f05df740b364"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"mode\": \"in_corpus\",\n  \"candidateIds\": [\n    \"67458fa0553c8f001f0bd333\",\n    \"674a78acac734b001f10841b\",\n    \"675032d82b6910001ffbd4ab\",\n    \"67503cdf2b6910001ffbdd13\",\n    \"6756bc9c9646f05df740b364\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13991,
+        "candidatesTokenCount": 149,
+        "totalTokenCount": 14140,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13991
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash-lite",
+      "responseId": "HbeMapiWF_TFvdIP656iyAQ"
+    }
+  }
+}

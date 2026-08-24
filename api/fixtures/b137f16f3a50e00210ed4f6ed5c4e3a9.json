@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "op": "answer",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "promptVersion": "answer-v2",
+    "schemaVersion": "answer-v1",
+    "language": "en",
+    "question": "Give me the exact wording of the narration about his ﷺ patience.",
+    "recordedAt": "2026-08-24T21:18:11.067Z"
+  },
+  "outcome": {
+    "ok": true,
+    "data": {
+      "answer": "The Prophet Muhammad's patience was evident even when his companions faced extreme persecution. When asked to supplicate against the polytheists, he responded by describing the severe tortures endured by people in previous nations who remained steadfast in their faith, such as having iron combs run through their flesh and saws splitting their heads. He affirmed that despite such trials, these individuals did not abandon their religion, and he assured that Allah would complete this religion, bringing a time of peace and security.",
+      "citations": [
+        "672b449ad458540020750f9f"
+      ]
+    },
+    "raw": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "{\n  \"answer\": \"The Prophet Muhammad's patience was evident even when his companions faced extreme persecution. When asked to supplicate against the polytheists, he responded by describing the severe tortures endured by people in previous nations who remained steadfast in their faith, such as having iron combs run through their flesh and saws splitting their heads. He affirmed that despite such trials, these individuals did not abandon their religion, and he assured that Allah would complete this religion, bringing a time of peace and security.\",\n  \"citations\": [\n    \"672b449ad458540020750f9f\"\n  ]\n}"
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 805,
+        "candidatesTokenCount": 141,
+        "totalTokenCount": 946,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 805
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "D7WMase0MoCzxN8Prd638QE"
+    }
+  }
+}
