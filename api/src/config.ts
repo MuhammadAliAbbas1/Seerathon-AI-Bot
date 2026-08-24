@@ -150,3 +150,25 @@ export function providerId(): string {
 export function fixtureMode(): "off" | "record" {
   return readEnv("FIXTURES") === "record" ? "record" : "off";
 }
+
+/**
+ * The demo cache is OFF unless DEMO_CACHE=on. Default off, deliberately.
+ *
+ * ⚠️ The reason is PERCEPTION, not correctness. The cached answers are real —
+ * they came out of the live pipeline and are re-validated by §5.3 on every hit.
+ * The problem is that a replayed answer returns in well under a second, and any
+ * judge who has used an AI product knows what a model call feels like.
+ * Sub-second reads as hardcoded. On a project whose entire claim is that it does
+ * not say things it cannot stand behind, spending a judge's first five seconds
+ * on "are these fabricated?" is a bad trade.
+ *
+ * Disclosing it was considered and rejected: a demo that is unambiguously real
+ * beats one that needs a caveat.
+ *
+ * The machinery is kept and tested because it is a LEVER — if the free tier
+ * bites during judging, flipping this to `on` and redeploying is faster and
+ * safer than rebuilding it under pressure (§5.6).
+ */
+export function demoCacheEnabled(): boolean {
+  return (readEnv("DEMO_CACHE") ?? "").trim().toLowerCase() === "on";
+}

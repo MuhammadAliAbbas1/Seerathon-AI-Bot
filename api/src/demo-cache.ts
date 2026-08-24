@@ -1,10 +1,26 @@
 /**
- * THE DEMO CACHE (CLAUDE.md §5.6).
+ * THE DEMO CACHE (CLAUDE.md §5.6) — BUILT, TESTED, AND OFF BY DEFAULT.
  *
- * Judging is unattended: a judge installs the APK, taps the landing screen's
- * example chips, and nobody is there to explain a 503. Those chips are the
- * four things we actively invite them to tap, so they are the four things that
- * must not depend on a provider being reachable.
+ * ── ⚠️ Read this before enabling it ────────────────────────────────────────
+ *
+ * `DEMO_CACHE=on` turns it on. Nothing else does. It ships disabled.
+ *
+ * The reason is PERCEPTION, not correctness. Everything below about safety is
+ * still true — a replayed answer is re-validated by §5.3 on every hit, and it
+ * came from the live pipeline in the first place. What is also true is that a
+ * cache hit returns in well under a second, and a judge who has used any AI
+ * product knows what a model call feels like. Sub-second reads as *hardcoded*.
+ * On a project whose entire claim is that it does not say things it cannot
+ * stand behind, spending a judge's first five seconds on "are these
+ * fabricated?" is a bad trade — even though the answers are genuinely ours.
+ *
+ * Disclosing it in the UI was considered and rejected: a demo that is
+ * unambiguously real beats one that needs a caveat.
+ *
+ * The machinery is kept rather than deleted because it is a LEVER. If the free
+ * tier bites during judging, flipping the flag and redeploying beats rebuilding
+ * this under pressure. **The reopening condition is quota exhaustion during
+ * judging, not convenience.**
  *
  * ── What this caches, and what it deliberately does NOT ────────────────────
  *
@@ -46,7 +62,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { REPO_ROOT } from "./config.ts";
+import { demoCacheEnabled, REPO_ROOT } from "./config.ts";
 import { loadCorpus } from "./corpus.ts";
 import { PROMPT_VERSION_BY_OP, SCHEMA_VERSION_BY_OP } from "./prompts.ts";
 import { fixtureKey } from "./providers/fixtures.ts";
@@ -126,6 +142,8 @@ export function readDemoCache(): DemoCacheFile | null {
 }
 
 export interface DemoCacheStatus {
+  /** Whether DEMO_CACHE=on. False is the shipped state — see the header. */
+  enabled: boolean;
   present: boolean;
   usable: boolean;
   entries: number;
@@ -144,9 +162,24 @@ export function withDemoCache(
   /** Explicit seam for tests, so they never depend on a file on disk. */
   fileOverride?: DemoCacheFile | null
 ): { provider: LlmProvider; status: DemoCacheStatus } {
+  // ⚠️ The flag governs the ON-DISK path only. An explicit file is a caller
+  // saying "use this one", which is what the tests do — the machinery stays
+  // exercised on every run whether or not the deployment has it switched on.
+  // A lever that is never pulled in anger is a lever nobody knows still works.
+  if (fileOverride === undefined && !demoCacheEnabled()) {
+    const present = existsSync(DEMO_CACHE_PATH);
+    console.log(
+      `[demo-cache] OFF (DEMO_CACHE is not "on")${present ? ", file present but unused" : ""} — every question goes live.`
+    );
+    return {
+      provider: inner,
+      status: { enabled: false, present, usable: false, entries: 0, reason: "disabled by config" },
+    };
+  }
+
   const file = fileOverride !== undefined ? fileOverride : readDemoCache();
   if (!file) {
-    return { provider: inner, status: { present: false, usable: false, entries: 0 } };
+    return { provider: inner, status: { enabled: true, present: false, usable: false, entries: 0 } };
   }
 
   const gate = checkGate(file, expectedGate(inner));
@@ -154,7 +187,10 @@ export function withDemoCache(
     // Loud, once, at boot. A silently-ignored demo cache is worse than none:
     // it looks like insurance and is not.
     console.warn(`[demo-cache] REFUSED — ${gate.reason}. Every question will go live.`);
-    return { provider: inner, status: { present: true, usable: false, entries: 0, reason: gate.reason } };
+    return {
+      provider: inner,
+      status: { enabled: true, present: true, usable: false, entries: 0, reason: gate.reason },
+    };
   }
 
   const lookup = (op: "classify" | "answer", model: string, question: string, language: string) =>
@@ -177,7 +213,7 @@ export function withDemoCache(
   };
 
   console.log(`[demo-cache] loaded — ${gate.entries} entries, corpus ${file.gate.corpusVersion}`);
-  return { provider, status: { present: true, usable: true, entries: gate.entries } };
+  return { provider, status: { enabled: true, present: true, usable: true, entries: gate.entries } };
 }
 
 /** Stable id for a cache build, so two builds are comparable. Diagnostic only. */

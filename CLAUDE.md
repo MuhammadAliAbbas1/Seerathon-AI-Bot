@@ -374,6 +374,7 @@ Two consequences, both binding:
 
 - **The quota copy must read as graceful, not as a failure.** It is "the service is briefly at capacity", never an error code, never red. §12.2 requires the UI to render that mode as calmly as a refusal — a red alert mid-demo reads as a crash even when the system is behaving exactly as designed.
 - **Any batch runner must pace itself.** The per-model intervals live in `api/src/pace.ts` and are the only place they should live. A human asking questions will not hit the limit; a loop will, and it will burn the daily budget discovering that.
+- ⚠️ **With the demo cache off (2026-08-25, above), the landing-screen chips are live calls too.** Two of the six chip questions trip the ratchet and cost nothing, but the other four each spend one or two requests. A judge who taps every chip in both languages and then asks a few questions of their own is inside the same order of magnitude as our own per-IP minute limit, which is the one they will hit first — `api/src/rate-limit.ts` holds the number. **Ours is the gentler failure**: it is a typed `rate_limited` **429** carrying the calm capacity copy in the question's own language, and it clears within the minute, whereas Gemini's own limit takes minutes to recover. We accept this over the credibility cost of sub-second answers.
 
 **Measured 2026-08-12, from a real 9-request batch** (fixtures in `api/fixtures/` carry the `usageMetadata`):
 
@@ -506,13 +507,36 @@ Two rules follow:
 - **A denylist of transient failures is always one failure mode behind reality.** An allowlist of reproducible ones cannot be. Three tests pin this, including one that scans the committed fixtures for poisoned entries so the artifacts are guarded and not only the code path.
 - **Check `reason`, not just `mode`.** A refusal for the wrong reason is not a pass — it is the fail-closed path firing, which proves the safety net works and proves nothing about the case. This is the same distinction §5.6's failure-path rule draws, appearing in the test suite instead of the response.
 
+⚠️ **The same shape, in a third place: a diagnostic that is correct on the happy path and wrong on the failure paths is worse than no diagnostic, because it reads as verified.** `servedFrom` was threaded only through the `in_corpus` return, so it reported `live` for every cached *refusal* — and refusals are three of the four rubric behaviours, so the field was wrong on the majority of the paths it existed to describe. It looked checked because the case anyone would spot-check by hand was the one that worked.
+
+That is F8 again with different clothes on. F8 was a case that looked tested and never ran; this was a field that looked truthful and lied on most paths. **The common cause is that verification landed on the path you naturally exercise, and the untouched paths inherited its credibility.** Whenever something reports on our own state — a fixture status, a diagnostic field, a health check — the test has to enumerate *every* branch, and the branch you would never think to try by hand is the one that will be wrong.
+
 **Optional, and worth it:** run the redundant ruling-check *only* in record mode, where we are spending requests deliberately. Disagreement between it and the router is a signal the router prompt needs work — redundancy where it is cheap, absent where it is expensive.
 
 #### Response caching
 
 - **Key:** `sha256(NFC-normalized + whitespace-collapsed + trimmed question + language + corpus_version + prompt_version)`. **NFC normalization is not optional** — Urdu and Arabic have multiple valid encodings of the same grapheme, so visually identical questions hash differently without it.
 - **Store:** in-process LRU `Map`. No new dependency, no infrastructure. Dies on cold start, not shared across instances — acceptable for a single demo session.
-- **Pre-seed from a committed `demo-cache.json`.** The example chips then make **zero API calls** and are immune to quota exhaustion, rate limiting, *and* a Gemini outage during judging. Novel judge questions still go live. This is our best demo insurance. **Built 2026-08-16 — see below for what it actually caches, which is not what this line originally said.**
+- **Pre-seed from a committed `demo-cache.json`.** The example chips then make **zero API calls** and are immune to quota exhaustion, rate limiting, *and* a Gemini outage during judging. Novel judge questions still go live. This is our best demo insurance. **Built 2026-08-16 — see below for what it actually caches, which is not what this line originally said, and for why it ships turned OFF.**
+
+#### ⏸ The demo cache is BUILT, TESTED, AND DISABLED — decided 2026-08-25
+
+**`DEMO_CACHE=on` is the only thing that enables it. It is not set in any environment.** Read the two sections below for what it does, then come back here for why it isn't doing it.
+
+**The reason is PERCEPTION, not correctness.** Nothing below is retracted: a replayed answer really did come out of the live pipeline, and §5.3 really does re-validate it on every hit. The problem is somewhere else entirely.
+
+A cache hit returns in **well under a second**. Any judge who has used an AI product knows what a model call feels like, and sub-second does not feel like one — it reads as **hardcoded**. On a project whose entire claim is that it does not say things it cannot stand behind, spending a judge's first five seconds on *"are these fabricated?"* is a bad trade. The answers are genuinely ours and would still be suspected, which is the worst of both.
+
+**Disclosing it was considered and rejected.** A label saying "served from a recorded response" is honest and it is also an invitation to discount everything on the screen. **A demo that is unambiguously real beats one that needs a caveat.**
+
+Two things follow, and they pull in opposite directions on purpose:
+
+- **The machinery stays.** It is a lever, not dead weight — if the free tier bites mid-judging, flipping a flag and redeploying is a two-minute operation, and rebuilding this under that pressure is not. `shell:check` keeps the chip list in sync so the lever still fits when it is pulled.
+- **The tests stay too, and keep running.** They pass an explicit file rather than reading disk, so the ratchet-beats-cache guarantee and the `servedFrom` paths are exercised on every run whether or not the deployment has it switched on. A lever nobody has pulled in months is not a lever.
+
+⚠️ **Reopening condition: quota exhaustion during judging. Not convenience, not latency, not a nervous rehearsal.** §5.9 already settled that this is not a speed fix — the live path is 5.4s end to end. The only thing that justifies the perception cost is the alternative being a 503.
+
+**The accepted cost, named:** with it off, the four landing-screen chips are **live calls**. A judge tapping through them quickly can hit the per-IP minute limit and get the calm capacity message instead of an answer — see the burst note in this section and the constants in `api/src/rate-limit.ts`. That is a real, visible failure mode we are choosing over a credibility one.
 
 #### The demo cache caches the MODEL'S RESPONSES, not our answers
 
@@ -546,7 +570,9 @@ They would cost nothing to allowlist, and someone will eventually notice them si
 
 It is on the wire for the one case where it matters — **a provider outage with the cache serving the chips leaves the app looking healthy while the system is not.** Not telling a user is fine; being unable to tell *ourselves* would be us misreporting our own state, which is the thing §5.6 exists to forbid.
 
-⚠️ `none` is a distinct value from `live` on purpose: the ratchet consults no model at all, and logging that as "the provider answered" would be false. **This was wrong once already** — `fromCache` was threaded only through the `in_corpus` return, so a cached *refusal* reported `live`. Three of four rubric behaviours are refusals, so the diagnostic was wrong on the majority of the paths that matter. A test pins each one.
+⚠️ `none` is a distinct value from `live` on purpose: the ratchet consults no model at all, and logging that as "the provider answered" would be false. **This was wrong once already** — `fromCache` was threaded only through the `in_corpus` return, so a cached *refusal* reported `live`. Three of four rubric behaviours are refusals, so the diagnostic was wrong on the majority of the paths that matter. A test pins each one. **The general lesson is recorded next to F8 above**, because it is the same failure in a different costume.
+
+**It stays on the wire with the cache off**, where it reads `live` or `none` — and that is exactly what makes it useful now: it is how we confirm from outside that the deployment really did take the flag, rather than assuming it.
 - **Invalidation is free** — `corpus_version` and `prompt_version` are in the key, so a corpus sync or prompt edit invalidates automatically. No purge logic.
 
 ---
@@ -655,7 +681,7 @@ The other two, in order: **longest verbatim run** against the entries actually s
 - A safe variant does exist: order the schema so `citations` precede `answer` (`propertyOrdering`), validate the ids as they arrive — all three §5.3 checks are id-based and need no prose — and only then stream. So "streaming is impossible here" would be **false**, and worth saying rather than hiding behind the safety argument.
 - It is nonetheless **not worth building**: at 5.4s total there is nothing to stream. It would add SSE plumbing through Vercel's legacy launcher (whose buffering behaviour is unverified), incremental client rendering, and a new mid-stream failure mode, to improve a five-second response.
 
-**The demo cache returns to being insurance, not a fix.** At 5.4s an unrehearsed judge question is answered promptly, which was the whole objection to leaning on a cache. `demo-cache.json` remains worth building for quota exhaustion and provider outages (§5.6) — not for latency.
+**The demo cache returns to being insurance, not a fix.** At 5.4s an unrehearsed judge question is answered promptly, which was the whole objection to leaning on a cache. `demo-cache.json` remains worth building for quota exhaustion and provider outages (§5.6) — not for latency. **It was built, and then switched off**: at 5.4s the live path is fast enough that the cache's own sub-second reply became the liability rather than the benefit (§5.6, 2026-08-25).
 
 #### Cold start is a non-issue — measured, not assumed
 
@@ -815,7 +841,7 @@ Every row states **what "complete" means**, so partial progress cannot quietly r
 | **4 — Chat UI** | 🟢 **effectively done** | Source cards, persistent disclaimer, and the whole surface **usable on a real device by someone who has never seen it** | ✅ on device: 48dp targets, switch knob direction, header fits, Urdu `lineHeight` (§12.0), **keyboard fixed** via `react-native-keyboard-controller` (§12.5) — all five checks passed. ✅ built: sources sheet, edit-and-resend, copy, new chat, landing screen (§12.6). Not yet observed on device: the §12.6 landing screen itself, error styling, sheet paging under RTL |
 | **5 — Urdu** | 🟡 **substantially done** | Bilingual end to end — detection, selection, answers, citations **and the whole shell** — with RTL correct on hardware | **Native-speaker register review (owner: the human, not the agent)** — including the open `معذرت`/`انکار` call flagged in `strings.ts`. RTL of the newest surfaces unverified on device |
 | **6 — Adversarial hardening** | 🟢 **done, with one case unconstructible** | `tests/adversarial.md` run **as one suite** before every router/prompt commit, every 🔴 case genuinely tested | 60 cases from a single source of truth (`tests/cases.ts`), document generated and drift-checked. 36 executable, **all covered by real fixtures**. G6 is unconstructible against corpus 1.0.0 — 0 of 154 entries have asymmetric language coverage — and is recorded as such, not skipped |
-| **7 — Deploy + demo rehearsal** | 🟡 **half** | Deployed **and rehearsed** — the demo run start to finish on the real APK against the real backend | Deploy done. **Rehearsal never done — the largest remaining risk.** `demo-cache.json` (§5.6) not built |
+| **7 — Deploy + demo rehearsal** | 🟡 **half** | Deployed **and rehearsed** — the demo run start to finish on the real APK against the real backend | Deploy done. **Rehearsal never done — the largest remaining risk.** `demo-cache.json` built and then **deliberately disabled** (§5.6, 2026-08-25) — it is a lever now, not a deliverable |
 | **8 — Submission** | 🟡 **in progress** | Repo public with a README, APK linked, screenshots and description uploaded | Judging is unattended (§12.6). Repo still **private and unpushed**; README written; reference images removed from git; arm64-only APK not yet rebuilt or smoke-tested |
 | **Stretch — WhatsApp** | ⬜ | A second surface on the same core | Not started. Strictly a bonus, never at the cost of the primary surface (§6) |
 
@@ -824,8 +850,9 @@ Every row states **what "complete" means**, so partial progress cannot quietly r
 1. **Phase 8 submission** — unattended judging means the repo, the README and the description *are* the pitch (§12.6). Nothing else matters if a judge never installs.
 2. **Phase 7 rehearsal** — never done, and it is where unknown-unknowns surface.
 3. **arm64 APK rebuild + smoke test** — the universal build was 82 MB, which is real install friction; `buildArchs` cuts it, and a packaging change needs one install-and-launch check.
-4. **`demo-cache.json`** — quota insurance for judging day (§5.6). No longer a latency crutch (§5.9).
-5. **Urdu register review** — blocked on human judgement, not on code.
+4. **Urdu register review** — blocked on human judgement, not on code.
+
+~~**`demo-cache.json`**~~ — ✅ built, then **switched off by choice** (§5.6). It is no longer a task; it is a flag to flip if quota bites during judging.
 
 ---
 

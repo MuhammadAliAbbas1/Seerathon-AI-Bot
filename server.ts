@@ -68,13 +68,14 @@ async function probeEgress(): Promise<Record<string, unknown>> {
 // No fixture layer in production: a deployed backend answers questions, it
 // does not replay a test corpus.
 //
-// The demo cache IS wired in, and is a different thing (§5.6). It holds
-// recorded MODEL RESPONSES for the landing screen's example chips — the four
-// things we actively invite a judge to tap — so those cannot 503 on a provider
-// outage. On a hit the pipeline still runs end to end: the ruling ratchet
-// fires first, §5.3 re-validates every citation against the current corpus,
-// and precedence re-runs. We replay the model's judgement; our own safety
-// logic always runs. A miss falls through here, live, exactly as before.
+// The demo cache is wired in but OFF unless DEMO_CACHE=on, which is not set
+// (§5.6). It holds recorded MODEL RESPONSES for the landing screen's example
+// chips so they cannot 503 on a provider outage — and it is disabled anyway,
+// because a cache hit returns in under a second and sub-second reads as
+// hardcoded to a judge. That is a perception cost, not a correctness one: on a
+// hit the pipeline still runs end to end, the ratchet still fires first, and
+// §5.3 still re-validates every citation. It stays here as a lever for quota
+// exhaustion during judging. With the flag off, every question goes live.
 const liveProvider = providerId() === "openrouter" ? createOpenRouterProvider() : createGeminiProvider();
 const { provider, status: demoCache } = withDemoCache(liveProvider);
 
@@ -206,6 +207,17 @@ server.listen(Number(process.env.PORT ?? readEnv("PORT") ?? 8787), () => {
   console.log(
     `Seerathon API up — provider=${providerId()} config=${configSource()} ` +
       `corpus=${corpus.corpusVersion} entries=${corpus.counts.total} env=${readEnv("DEPLOY_ENV") ?? "unset"} ` +
-      `demoCache=${demoCache.usable ? `${demoCache.entries} entries` : demoCache.present ? "REFUSED" : "absent"}`
+      // "off" and "REFUSED" are different claims and must not collapse into
+      // one: off is our decision, REFUSED means the gate rejected a stale file.
+      // Reading one as the other is the diagnostic lying about our own state.
+      `demoCache=${
+        !demoCache.enabled
+          ? "off"
+          : demoCache.usable
+            ? `${demoCache.entries} entries`
+            : demoCache.present
+              ? "REFUSED"
+              : "absent"
+      }`
   );
 });

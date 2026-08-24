@@ -186,6 +186,45 @@ describe("demo cache — the diagnostic may not lie", () => {
   });
 });
 
+describe("demo cache — OFF unless explicitly enabled", () => {
+  /**
+   * The shipped state, pinned. `DEMO_CACHE=on` is the only thing that turns it
+   * on; a `demo-cache.json` sitting on disk does not.
+   *
+   * The reason it is off is perception, not correctness (see demo-cache.ts): a
+   * hit returns in under a second, and sub-second reads as hardcoded to a judge
+   * who has used any AI product. This test is the tripwire for that decision
+   * being reversed by accident — including by someone setting DEMO_CACHE
+   * locally and forgetting, which is exactly when it would ship on.
+   */
+  it("the on-disk cache is not consulted without DEMO_CACHE=on", async () => {
+    let calls = 0;
+    const inner = deadProvider(() => calls++);
+    const { provider, status } = withDemoCache(inner);
+
+    assert.equal(status.enabled, false, "DEMO_CACHE is set in this environment — that is not the shipped default");
+    assert.equal(status.usable, false);
+    assert.equal(status.entries, 0);
+    assert.equal(provider, inner, "disabled means the inner provider is returned untouched, not wrapped");
+
+    // And it behaves that way: a question the committed cache DOES cover still
+    // goes live, because the wrapper was never installed.
+    await ask("What was the Prophet's ﷺ character like?", { provider });
+    assert.ok(calls > 0, "a covered question must still reach the provider when the cache is off");
+  });
+
+  it("an explicit file still works, so the lever is exercised on every run", async () => {
+    const q = "A cached question";
+    const file = cacheFor([
+      entryFor("classify", q, "en", { mode: "in_corpus", candidateIds: [ID_BOTH] }),
+      entryFor("answer", q, "en", { answer: "Cached prose.", citations: [ID_BOTH] }),
+    ]);
+    const { status } = withDemoCache(deadProvider(), file);
+    assert.equal(status.enabled, true);
+    assert.equal(status.usable, true);
+  });
+});
+
 describe("demo cache — absent or refused is not a failure mode", () => {
   it("a refused cache falls through to live rather than throwing", async () => {
     const file = cacheFor([entryFor("classify", "q", "en", { mode: "out_of_corpus", candidateIds: [] })], {

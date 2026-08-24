@@ -127,6 +127,13 @@ if (!classMatch) {
  * the app quietly stops being covered — the demo looks prepared and is not,
  * which is the specific failure the cache exists to prevent.
  *
+ * ⚠️ The cache ships DISABLED (DEMO_CACHE is not set — see api/src/config.ts:
+ * a sub-second answer reads as hardcoded). This check is kept running anyway,
+ * because the whole point of keeping the machinery is that it can be switched
+ * on under quota pressure without a rebuild. A lever that has silently drifted
+ * out of sync is not a lever, and the moment you need it is the worst moment
+ * to discover the chips no longer match.
+ *
  * Compares the chip strings, not the cache file: a stale demo-cache.json is
  * caught by its own gate at boot, but a chip that drifted out of the curated
  * list has nothing else watching it.
