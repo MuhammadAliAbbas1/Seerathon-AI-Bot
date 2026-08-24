@@ -855,14 +855,28 @@ Every row states **what "complete" means**, so partial progress cannot quietly r
 | **4 — Chat UI** | 🟢 **effectively done** | Source cards, persistent disclaimer, and the whole surface **usable on a real device by someone who has never seen it** | ✅ on device: 48dp targets, switch knob direction, header fits, Urdu `lineHeight` (§12.0), **keyboard fixed** via `react-native-keyboard-controller` (§12.5) — all five checks passed. ✅ built: sources sheet, edit-and-resend, copy, new chat, landing screen (§12.6). Not yet observed on device: the §12.6 landing screen itself, error styling, sheet paging under RTL |
 | **5 — Urdu** | 🟡 **substantially done** | Bilingual end to end — detection, selection, answers, citations **and the whole shell** — with RTL correct on hardware | **Native-speaker register review (owner: the human, not the agent)** — including the open `معذرت`/`انکار` call flagged in `strings.ts`. RTL of the newest surfaces unverified on device |
 | **6 — Adversarial hardening** | 🟢 **done, with one case unconstructible** | `tests/adversarial.md` run **as one suite** before every router/prompt commit, every 🔴 case genuinely tested | 60 cases from a single source of truth (`tests/cases.ts`), document generated and drift-checked. 36 executable, **all covered by real fixtures**. G6 is unconstructible against corpus 1.0.0 — 0 of 154 entries have asymmetric language coverage — and is recorded as such, not skipped |
-| **7 — Deploy + demo rehearsal** | 🟡 **half** | Deployed **and rehearsed** — the demo run start to finish on the real APK against the real backend | Deploy done. **Rehearsal never done — the largest remaining risk.** `demo-cache.json` built and then **deliberately disabled** (§5.6, 2026-08-25) — it is a lever now, not a deliverable |
+| **7 — Deploy + demo rehearsal** | 🟢 **backend rehearsed** | Deployed **and rehearsed** — the demo run start to finish on the real APK against the real backend | ✅ 7-question paced run against the live deployment 2026-08-25: all four rubric behaviours correct in both languages, **every refusal for the right `reason`**, 13/13 citations valid, 0.4–7.4s. `demo-cache.json` built then **deliberately disabled** (§5.6) — a lever, not a deliverable. **Remaining: the same run through the APK on device** (the human's half) |
 | **8 — Submission** | 🟡 **in progress** | Repo public with a README, APK linked, screenshots and description uploaded | Judging is unattended (§12.6). Repo still **private and unpushed**; README written; reference images removed from git; arm64-only APK not yet rebuilt or smoke-tested |
 | **Stretch — WhatsApp** | ⬜ | A second surface on the same core | Not started. Strictly a bonus, never at the cost of the primary surface (§6) |
+
+#### What the 2026-08-25 rehearsal found, and the one thing it did not settle
+
+The backend behaved correctly on all seven questions — the table above has the numbers. Two things are worth carrying forward rather than filing as "passed":
+
+⚠️ **§5.3 guarantees PROVENANCE, not PROPORTIONALITY, and the rehearsal has a worked example.** *"What was the Prophet's ﷺ daily routine?"* is half-covered: the corpus holds many individual habits and **no entry about a routine**. The answer came back `in_corpus` with four valid citations — household chores, visiting graves, combing hair, manner of walking — and **every particular in it is genuinely grounded**, checked field by field against the entries.
+
+What is not grounded is the *shape*: an opening sentence asserting he "had a routine that balanced his spiritual duties with his daily life", and a narrative order implying those four unrelated traits belong to one day. There is also a small attribution drift — the corpus says visiting graves cultivates detachment **in the visitor**, and the answer attributes the motive to him.
+
+All three citation checks passed, correctly, and could not have caught any of it. **The residual risk after §5.3 is an answer that overstates how well the corpus covers the question** — not a fabricated fact, a fabricated frame. Naming it because it is invisible to every guard we have: the ids are real, the bodies are real, the language is right, and the answer reads *better* than a proportionate one would.
+
+The proportionate answer names its own coverage — *"the collection does not describe a daily routine as such, but it records these habits…"*. That is an **answer-prompt change**, so it costs a `PROMPT_VERSION` bump and re-recording every answer-path fixture. Not free, and not obviously worth it before submission. **Raised, not fixed.**
+
+✅ **Every refusal fired for the right `reason`, live.** Both `out_of_corpus` refusals logged `reason=model` — the model genuinely classified them as outside the corpus, not the fail-closed path masking a provider failure. That is §5.6's "check `reason`, not just `mode`" holding on the deployment rather than only in the suite, and it is only checkable at all because the 200 path now logs its reason.
 
 **Priority of what remains, highest first:**
 
 1. **Phase 8 submission** — unattended judging means the repo, the README and the description *are* the pitch (§12.6). Nothing else matters if a judge never installs.
-2. **Phase 7 rehearsal** — never done, and it is where unknown-unknowns surface.
+2. **The rehearsal's other half** — the same run through the APK on a real device. The backend is proven; the surface is not.
 3. **arm64 APK rebuild + smoke test** — the universal build was 82 MB, which is real install friction; `buildArchs` cuts it, and a packaging change needs one install-and-launch check.
 4. **Urdu register review** — blocked on human judgement, not on code.
 
