@@ -167,6 +167,28 @@ for (const [name, text] of chips) {
   }
 }
 
+/* ── 4. The lever is still valid against the current corpus ────────────────
+ *
+ * The cache is off, so nothing consults its gate at runtime. That is exactly
+ * why this is checked here: a lever whose gate has silently gone stale looks
+ * like insurance and is not, and the moment you reach for it is the worst
+ * moment to find out. A mismatch here is not a failure — it is a rebuild.
+ */
+const demoCache = JSON.parse(readFileSync(join(root, "demo-cache.json"), "utf8"));
+const cacheEntries = Object.keys(demoCache.entries ?? {}).length;
+const gateOk = demoCache.gate?.corpusVersion === corpus.corpusVersion;
+console.log(
+  `\ndemo cache   : ${cacheEntries} entries, corpus ${demoCache.gate?.corpusVersion} ` +
+    `${gateOk ? "✔ matches corpus.json" : `✗ corpus.json is ${corpus.corpusVersion}`} (feature OFF by design)`
+);
+if (!cacheEntries) failures.push("demo-cache.json has no entries — the lever would do nothing if pulled");
+if (!gateOk) {
+  failures.push(
+    `demo-cache.json was built against corpus ${demoCache.gate?.corpusVersion}, corpus.json is now ` +
+      `${corpus.corpusVersion} — the gate would refuse the whole file. Re-run demo-cache:build.`
+  );
+}
+
 if (failures.length) {
   console.error("\nshell:check FAILED");
   for (const f of failures) console.error(`  ✗ ${f}`);

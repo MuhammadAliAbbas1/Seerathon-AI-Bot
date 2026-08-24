@@ -60,7 +60,21 @@
  * recording, the less any of it tells them.
  */
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+// ⚠️ A STATIC IMPORT, not readFileSync — and this was found the hard way.
+//
+// It shipped as `readFileSync(join(REPO_ROOT, "demo-cache.json"))`, which is
+// precisely the mistake §5.7 records for corpus.json: Vercel traces a
+// function's files statically, and a path computed at runtime from
+// import.meta.url is invisible to that tracer. The file is committed and not
+// in .vercelignore, so it reaches the BUILD — and still never reached the
+// function bundle. The first deployment with the flag wired reported
+// `demoCache.present: false` from a repo where the file plainly exists.
+//
+// With the cache off that is inert, which is exactly why it was dangerous:
+// the lever would have reported "on" and quietly served nothing, at the one
+// moment we reached for it. Same pattern as F8 and `servedFrom` — the path we
+// never exercised inherited the credibility of the ones we did (§5.6).
+import demoCacheJson from "../../demo-cache.json" with { type: "json" };
 import { join } from "node:path";
 import { demoCacheEnabled, REPO_ROOT } from "./config.ts";
 import { loadCorpus } from "./corpus.ts";
@@ -68,6 +82,13 @@ import { PROMPT_VERSION_BY_OP, SCHEMA_VERSION_BY_OP } from "./prompts.ts";
 import { fixtureKey } from "./providers/fixtures.ts";
 import type { LlmProvider, ProviderOutcome } from "./providers/types.ts";
 
+/**
+ * Where `demo-cache-build.ts` WRITES the file. Build-time only.
+ *
+ * The runtime never reads this path — it reads the imported object above, so
+ * the bundler can see the dependency. Kept absolute so the build script writes
+ * to the repo root regardless of the directory it is invoked from.
+ */
 export const DEMO_CACHE_PATH = join(REPO_ROOT, "demo-cache.json");
 
 /**
@@ -130,15 +151,13 @@ export function checkGate(file: DemoCacheFile, expected: DemoCacheGate): GateRes
 }
 
 export function readDemoCache(): DemoCacheFile | null {
-  if (!existsSync(DEMO_CACHE_PATH)) return null;
-  try {
-    return JSON.parse(readFileSync(DEMO_CACHE_PATH, "utf8")) as DemoCacheFile;
-  } catch {
-    // A corrupt cache is a missing cache. It must never take the service down —
-    // this whole mechanism exists to make the demo MORE robust, so it may not
-    // become a new way for it to fail.
-    return null;
-  }
+  // A corrupt or half-built cache is a MISSING cache. It must never take the
+  // service down — this whole mechanism exists to make the demo more robust,
+  // so it may not become a new way for it to fail. With a static import the
+  // parse already happened at load, so all that is left is a shape check.
+  const f = demoCacheJson as unknown as Partial<DemoCacheFile> | null;
+  if (!f || typeof f !== "object" || !f.gate || !f.entries) return null;
+  return f as DemoCacheFile;
 }
 
 export interface DemoCacheStatus {
@@ -167,7 +186,10 @@ export function withDemoCache(
   // exercised on every run whether or not the deployment has it switched on.
   // A lever that is never pulled in anger is a lever nobody knows still works.
   if (fileOverride === undefined && !demoCacheEnabled()) {
-    const present = existsSync(DEMO_CACHE_PATH);
+    // `present` is read from the BUNDLED object, so it answers the question
+    // that actually matters — would the lever work if pulled — rather than
+    // whether a file happens to sit in the repo.
+    const present = readDemoCache() !== null;
     console.log(
       `[demo-cache] OFF (DEMO_CACHE is not "on")${present ? ", file present but unused" : ""} — every question goes live.`
     );

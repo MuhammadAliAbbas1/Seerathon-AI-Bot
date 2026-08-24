@@ -507,9 +507,23 @@ Two rules follow:
 - **A denylist of transient failures is always one failure mode behind reality.** An allowlist of reproducible ones cannot be. Three tests pin this, including one that scans the committed fixtures for poisoned entries so the artifacts are guarded and not only the code path.
 - **Check `reason`, not just `mode`.** A refusal for the wrong reason is not a pass — it is the fail-closed path firing, which proves the safety net works and proves nothing about the case. This is the same distinction §5.6's failure-path rule draws, appearing in the test suite instead of the response.
 
-⚠️ **The same shape, in a third place: a diagnostic that is correct on the happy path and wrong on the failure paths is worse than no diagnostic, because it reads as verified.** `servedFrom` was threaded only through the `in_corpus` return, so it reported `live` for every cached *refusal* — and refusals are three of the four rubric behaviours, so the field was wrong on the majority of the paths it existed to describe. It looked checked because the case anyone would spot-check by hand was the one that worked.
+#### ⚠️ THE RULE: verification does not spread. Untouched paths inherit credibility without earning it.
 
-That is F8 again with different clothes on. F8 was a case that looked tested and never ran; this was a field that looked truthful and lied on most paths. **The common cause is that verification landed on the path you naturally exercise, and the untouched paths inherited its credibility.** Whenever something reports on our own state — a fixture status, a diagnostic field, a health check — the test has to enumerate *every* branch, and the branch you would never think to try by hand is the one that will be wrong.
+This is the most expensive recurring mistake in the project, and it has now produced three distinct bugs that all looked fine. Stating it as a rule rather than as three anecdotes, because the anecdotes kept failing to generalise in time to prevent the next one:
+
+> **Whatever you exercise by hand gets verified. Everything adjacent to it gets *assumed* verified, because it sits inside something that visibly works.** The path you would never think to try by hand is the one that is wrong, and it is protected from discovery by the credibility of its neighbours.
+
+The three instances, all the same shape:
+
+| # | What looked verified | What was actually true | How long it hid |
+|---|---|---|---|
+| **F8** | A case sitting green in the adversarial suite | A recorded HTTP 503 replaying in 2ms; the case had never once run | From the moment it was recorded until 2026-08-12 |
+| **`servedFrom`** | A diagnostic field reporting our own state | Threaded only through the `in_corpus` return, so every cached *refusal* claimed `live` — wrong on three of the four rubric behaviours | Until the verification pass after it was written |
+| **`demo-cache.json`** | A file committed, not ignored, and present in the repo | Loaded by `readFileSync` on a runtime-computed path, so Vercel's tracer never bundled it — the deployment reported `present: false` | Until the first deploy that had a reason to look |
+
+Note what they have in common: **in every case the happy path was genuinely fine.** F8 returned a refusal, `servedFrom` was right on `in_corpus`, the cache file really was committed. Each bug lived in the branch nobody would spot-check, wearing the credibility of the branch everybody would.
+
+The working rule, and it generalises the "check `reason`, not just `mode`" bullet above rather than sitting beside it: **anything that reports on our own state — a fixture status, a diagnostic field, a health field, an artifact's presence — needs a test per branch, including branches that are currently unreachable.** The demo cache is switched off and `shell:check` still validates its gate against the live corpus, precisely because a lever nobody pulls is where this rule bites next.
 
 **Optional, and worth it:** run the redundant ruling-check *only* in record mode, where we are spending requests deliberately. Disagreement between it and the router is a signal the router prompt needs work — redundancy where it is cheap, absent where it is expensive.
 

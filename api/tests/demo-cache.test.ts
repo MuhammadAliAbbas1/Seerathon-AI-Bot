@@ -10,7 +10,7 @@
 import { strict as assert } from "node:assert";
 import { before, describe, it } from "node:test";
 import { ask } from "../src/ask.ts";
-import { checkGate, expectedGate, withDemoCache } from "../src/demo-cache.ts";
+import { checkGate, expectedGate, readDemoCache, withDemoCache } from "../src/demo-cache.ts";
 import type { DemoCacheFile, DemoCacheGate } from "../src/demo-cache.ts";
 import { fixtureKey } from "../src/providers/fixtures.ts";
 import { ID_BOTH, ID_GHOST, installFakeCorpus } from "./helpers.ts";
@@ -211,6 +211,26 @@ describe("demo cache — OFF unless explicitly enabled", () => {
     // goes live, because the wrapper was never installed.
     await ask("What was the Prophet's ﷺ character like?", { provider });
     assert.ok(calls > 0, "a covered question must still reach the provider when the cache is off");
+  });
+
+  /**
+   * The committed cache must be REACHABLE, not merely committed.
+   *
+   * It first shipped behind `readFileSync(join(REPO_ROOT, …))`, which Vercel's
+   * file tracer cannot see — so the file reached the build and never the
+   * function bundle, and the deployment reported `present: false` from a repo
+   * where it plainly exists. Inert while the cache is off, and a silent no-op
+   * the moment anyone pulled the lever.
+   *
+   * Note this asserts nothing about the gate: `installFakeCorpus` sets the
+   * corpus version to "test", so gate validity is checked by `shell:check`
+   * against the real corpus.json instead.
+   */
+  it("the committed cache is importable, so the lever is not a no-op", () => {
+    const file = readDemoCache();
+    assert.notEqual(file, null, "demo-cache.json is not reaching the runtime — see the import comment");
+    assert.ok(Object.keys(file!.entries).length > 0, "an empty cache is a lever that does nothing");
+    assert.ok(file!.gate.corpusVersion, "a cache with no gate could never be validated");
   });
 
   it("an explicit file still works, so the lever is exercised on every run", async () => {
