@@ -271,6 +271,36 @@ describe("POST /api/ask contract", () => {
     assert.notEqual(cite.title, `EN ${ID_BOTH}`);
   });
 
+  /**
+   * The diagnostic is LOGGED and never sent — on every status, not just the
+   * ones anyone thinks to check.
+   *
+   * Successes gained a diagnostic so the deployment can say WHY it refused;
+   * `reason` was previously invisible in production, which made a fail-closed
+   * refusal and a genuine classification indistinguishable in the logs. The
+   * risk that creates is the opposite one: a later `{ ...out }` spread putting
+   * internal reasons on the wire. Both branches are asserted because the rule
+   * (§5.6) is that the branch nobody exercises is the one that breaks.
+   */
+  it("the diagnostic is present on 200 and 503, and reaches neither body", async () => {
+    const ok = await handleAsk(
+      { question: Q, language: "en" },
+      twoStage(routed([ID_BOTH]), answered("He was gentle.", [ID_BOTH]))
+    );
+    assert.equal(ok.status, 200);
+    assert.match(ok.diagnostic ?? "", /reason=/, "a 200 must record why it answered");
+    assert.equal((ok.body as Record<string, unknown>).diagnostic, undefined);
+    assert.equal((ok.body as Record<string, unknown>).reason, undefined, "reason is a log field, not a wire field");
+
+    const fail = await handleAsk(
+      { question: Q },
+      twoStage(routed([ID_BOTH]), { ok: false, failure: "quota", detail: "429" })
+    );
+    assert.equal(fail.status, 503);
+    assert.ok(fail.diagnostic, "a 503 must record its cause");
+    assert.equal((fail.body as Record<string, unknown>).diagnostic, undefined);
+  });
+
   it("quota exhaustion is 503 with a typed code, not a fourth mode", async () => {
     const res = await handleAsk(
       { question: Q },

@@ -82,5 +82,17 @@ export async function handleAsk(rawBody: unknown, provider: LlmProvider): Promis
       // the wire at all rather than only in the logs.
       servedFrom: result.servedFrom,
     },
+    // ⚠️ LOGGED, never sent — `diagnostic` is a sibling of `body`, and only
+    // `body` is written to the response.
+    //
+    // Failures already carried this. Successes did not, which meant the
+    // deployment could not say WHY it refused: three of the four rubric
+    // behaviours are refusals, and §5.6's own rule is "check `reason`, not
+    // just `mode`" — a refusal from the fail-closed path and one from a
+    // genuine classification were indistinguishable in production. Found while
+    // rehearsing, when the question "why did it decline that?" had no
+    // answerable source outside a local run.
+    diagnostic: `${result.mode} reason=${result.reason} lang=${result.language} ` +
+      `cites=${result.citations.length} servedFrom=${result.servedFrom}`,
   };
 }
