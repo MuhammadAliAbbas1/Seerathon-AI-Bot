@@ -20,12 +20,11 @@ You can check the backend is live without installing anything: **[`/api/health`]
 
 ---
 
-<!-- SCREENSHOTS — add the two image files before publishing, or delete this block.
-     See docs/screenshots/README.md for what each one should show. -->
+| A cited answer | The record behind it | A ruling question, refused |
+|---|---|---|
+| ![An in-corpus answer with its citation chip showing the source count](docs/screenshots/01-answer.jpeg) | ![The source card: entry title, verbatim hadith text, hawala reference and the 24-character entry id](docs/screenshots/07-sources.jpeg) | ![A ruling question redirected to a scholar](docs/screenshots/02-ruling.jpeg) |
 
-| A cited answer | A ruling question, refused |
-|---|---|
-| ![An answer with its source card open](docs/screenshots/01-answer.png) | ![A ruling question redirected to a scholar](docs/screenshots/02-ruling.png) |
+The middle frame is the one that matters: that 24-character id is a real entry in the published corpus, and it is what the validation described below actually checks.
 
 ---
 

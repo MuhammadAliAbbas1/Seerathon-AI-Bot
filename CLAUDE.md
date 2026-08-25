@@ -530,6 +530,8 @@ Note what they have in common: **in every case the happy path was genuinely fine
 
 The working rule, and it generalises the "check `reason`, not just `mode`" bullet above rather than sitting beside it: **anything that reports on our own state — a fixture status, a diagnostic field, a health field, an artifact's presence, a rendering decision — needs a test per branch, at the level a user would notice, including branches that are currently unreachable.**
 
+⚠️ **And it is not limited to code we wrote.** The same shape turned up in a *tool* on 2026-08-25: the EAS fingerprint was used as evidence that an APK was current with its JS, and it does not answer that question — it answers whether a **native** rebuild is needed, excluding JS by design (§6). It ran, it matched, and it was confidently wrong about a question nobody had asked it. **Before trusting any check, state the question it actually answers** — a green result from the wrong check is indistinguishable from a green result from the right one.
+
 #### ⚠️ The sharpest form: a DISABLED feature's failure modes are invisible because nothing exercises them
 
 The `demo-cache.json` case is the worst of the three and deserves its own statement, because the property that made it dangerous is one that *grows* over time rather than being caught by use.
@@ -768,10 +770,32 @@ Consequences that follow from this, all mandatory:
 
 The APK now points at the deployed backend (§5.7), which is **stable across redeploys: shipping a new backend no longer requires a new APK.**
 
-Kept because both facts still bind, and one of them will bite again:
+Kept because all three facts still bind, and each of them will bite again:
 
 - **`EXPO_PUBLIC_*` is baked in at BUILD time, not read at runtime.** The URL set when `eas build` runs is the URL inside the APK, permanently. Changing the backend URL — not the backend *code* — still costs a rebuild.
 - **The URL belongs in `eas.json`'s `env` block, not `mobile/.env`.** EAS builds the committed git tree and `.env*` has been gitignored since the first commit, so a local `.env` never reaches the builder and `EXPO_PUBLIC_API_URL` would arrive undefined. Both are kept in sync anyway so local Expo Go runs work.
+- 🚫 **The EAS fingerprint does NOT tell you whether the APK is current with your JS. Never use it to answer that.** See below — this was got wrong once, out loud, on 2026-08-25.
+
+#### ⚠️ What the fingerprint actually answers, and the question it silently does not
+
+**`@expo/fingerprint` hashes NATIVE build inputs** — dependencies, app config, plugins, native directories. **It deliberately excludes JS source**, because its entire purpose is answering *"does this change require a new native build, or could it ship over-the-air?"* An unchanged fingerprint means "no new native build needed", which is **not** the same claim as "your APK contains your current code".
+
+The two questions and their checks:
+
+| Question | The check that answers it |
+|---|---|
+| Does this change need a **native rebuild**? | the **fingerprint** |
+| Is the APK **current with my JS**? | the build's **`gitCommitHash` against `HEAD`** |
+
+**How it misled, concretely.** Asked whether a rebuild was needed before shooting screenshots, the fingerprint was computed against the working tree, matched the build's recorded hash exactly across all 35 sources, and was reported as *independent confirmation that no app-side code had changed*. **It confirmed no NATIVE input had changed.** The conclusion happened to be right, but it rested on a `git diff` showing the only `mobile/` change was type-only — the fingerprint was presented as a second, stronger check and was not one.
+
+The error surfaced the other way round an hour later: the `isRtlScript` fix (§12.6) changed `theme.ts`, was predicted to change the fingerprint, and **did not** — same hash, different APK. That rebuild was genuinely required, because **`expo-updates` is not a dependency and `app.json` has no `updates` block**, so the JS bundle is embedded at build time and there is no OTA channel. Right action, wrong stated reason.
+
+⚠️ **If OTA is ever added, this inverts**: the fingerprint becomes the right check for "rebuild or push an update", and `gitCommitHash` stops describing what is on the device at all.
+
+**Verifying a shipped JS change, when it matters:** unzip the APK and read `assets/index.android.bundle`. It is a Hermes bundle — **read it as UTF-16 as well as UTF-8**, because non-ASCII strings live in a UTF-16 string table and a UTF-8-only read silently fails to find them (which briefly made a correct old bundle look wrong). Comparing the old and new bundles for the escaped-vs-literal character class is what actually proved the fix shipped.
+
+> **This is §5.6's rule in a new costume: a check that appears to verify one thing while actually verifying another.** The four instances there are our own code; this one is a *tool*, and it is more dangerous for it — the four were untested paths, whereas this ran, returned a confident matching hash, and answered a question nobody had asked it. **Before trusting a check, state the question it actually answers.**
 
 History, so the reasoning is not rediscovered: **the LAN path is unusable on this network — the router has client isolation on**, so the phone cannot reach the laptop by IP at all. Device testing went through a localtunnel, and because tunnel URLs change on every restart while `EXPO_PUBLIC_*` bakes at build time, **every tunnel restart cost a full ~10-minute rebuild.** That is precisely the tax Phase 3.5 removed, and it is why the deploy was brought forward rather than deferred again. The `bypass-tunnel-reminder` header the client used to send (localtunnel serves an HTML interstitial to anything it takes for a browser, which arrives as unparseable JSON) has been removed.
 
@@ -889,7 +913,7 @@ Every row states **what "complete" means**, so partial progress cannot quietly r
 | **5 — Urdu** | 🟡 **substantially done** | Bilingual end to end — detection, selection, answers, citations **and the whole shell** — with RTL correct on hardware | **Native-speaker register review (owner: the human, not the agent)** — including the open `معذرت`/`انکار` call flagged in `strings.ts`. RTL of the newest surfaces unverified on device |
 | **6 — Adversarial hardening** | 🟢 **done, with one case unconstructible** | `tests/adversarial.md` run **as one suite** before every router/prompt commit, every 🔴 case genuinely tested | 60 cases from a single source of truth (`tests/cases.ts`), document generated and drift-checked. 36 executable, **all covered by real fixtures**. G6 is unconstructible against corpus 1.0.0 — 0 of 154 entries have asymmetric language coverage — and is recorded as such, not skipped |
 | **7 — Deploy + demo rehearsal** | 🟢 **backend rehearsed** | Deployed **and rehearsed** — the demo run start to finish on the real APK against the real backend | ✅ 7-question paced run against the live deployment 2026-08-25: all four rubric behaviours correct in both languages, **every refusal for the right `reason`**, 13/13 citations valid, 0.4–7.4s. `demo-cache.json` built then **deliberately disabled** (§5.6) — a lever, not a deliverable. **Remaining: the same run through the APK on device** (the human's half) |
-| **8 — Submission** | 🟡 **in progress** | Repo public with a README, APK linked, screenshots and description uploaded | Judging is unattended (§12.6). ✅ **arm64 APK built** — 29.2 MB, down from 82 MB, from commit `0f11f37`; ✅ README written; ✅ reference images out of git; ✅ pushed to `origin/main`, still **private**. Remaining: smoke test + screenshots (none captured yet — `docs/screenshots/` holds only its README, and the root README inlines two of them), then make public and cut the Release |
+| **8 — Submission** | 🟡 **in progress** | Repo public with a README, APK linked, screenshots and description uploaded | Judging is unattended (§12.6). ✅ **arm64 APK rebuilt** after the `isRtlScript` fix — 29.2 MB, build `04e838eb` from `8d6908f`, fix verified in the shipped Hermes bundle; ✅ README written; ✅ reference images out of git; ✅ **all seven screenshots captured** on that build and wired into the README (three inline: 01, 07, 02 — `.jpeg`, not `.png`, which was broken in every reference until 2026-08-25). **Remaining: make the repo public, then cut the `v1.0.0` Release with the APK attached** — the EAS artifact URL expires and must never be the submission link |
 | **Stretch — WhatsApp** | ⬜ | A second surface on the same core | Not started. Strictly a bonus, never at the cost of the primary surface (§6) |
 
 #### What the 2026-08-25 rehearsal found, and the one thing it did not settle
