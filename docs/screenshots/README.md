@@ -22,4 +22,4 @@ The feed shows assets as "View image" links rather than thumbnails, so **image 1
 5. `05-out-of-corpus.png` — the cryptocurrency question declined. Completes the four rubric behaviours, and shows the refusal is calm — no red, no error iconography
 6. `06-about.png` — the About / Corpus Rules screen showing the **verbatim** organizer-published disclaimer and the five usage rules
 
-Optional 7th: a terminal capture of `npm run check` — 138 tests passing plus the drift checks. Evidence of the half a judge cannot otherwise see.
+Optional 7th: a terminal capture of `npm run check` — 154 tests passing plus the drift checks. Evidence of the half a judge cannot otherwise see.

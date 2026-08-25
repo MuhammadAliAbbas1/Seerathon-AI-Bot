@@ -509,21 +509,26 @@ Two rules follow:
 
 #### ⚠️ THE RULE: verification does not spread. Untouched paths inherit credibility without earning it.
 
-This is the most expensive recurring mistake in the project, and it has now produced three distinct bugs that all looked fine. Stating it as a rule rather than as three anecdotes, because the anecdotes kept failing to generalise in time to prevent the next one:
+🔴 **THIS RULE HAS NOW FIRED FOUR TIMES.** It is the most expensive recurring mistake in the project, and four is a pattern, not a run of bad luck — **treat it as a live hazard on every change, not as an anecdote about past ones.** Stating it as a rule rather than as four stories, because the stories kept failing to generalise in time to prevent the next one:
 
 > **Whatever you exercise by hand gets verified. Everything adjacent to it gets *assumed* verified, because it sits inside something that visibly works.** The path you would never think to try by hand is the one that is wrong, and it is protected from discovery by the credibility of its neighbours.
 
-The three instances, all the same shape:
+The four instances, all the same shape:
 
 | # | What looked verified | What was actually true | How long it hid |
 |---|---|---|---|
 | **F8** | A case sitting green in the adversarial suite | A recorded HTTP 503 replaying in 2ms; the case had never once run | From the moment it was recorded until 2026-08-12 |
 | **`servedFrom`** | A diagnostic field reporting our own state | Threaded only through the `in_corpus` return, so every cached *refusal* claimed `live` — wrong on three of the four rubric behaviours | Until the verification pass after it was written |
 | **`demo-cache.json`** | A file committed, not ignored, and present in the repo | Loaded by `readFileSync` on a runtime-computed path, so Vercel's tracer never bundled it — the deployment reported `present: false` | Until the first deploy that had a reason to look |
+| **`isRtlScript`** (§12.6) | A guard in `shell:check` asserting six cases, itself verified by watching it fail | It tested the character **class**, never the **consumer** — and asserted the broken case as expected, so English-plus-ﷺ rendering at Urdu metrics could not be caught. Shipped in the APK | From `319018f` (2026-08-15) until a human looked at a device on 2026-08-25 |
 
-Note what they have in common: **in every case the happy path was genuinely fine.** F8 returned a refusal, `servedFrom` was right on `in_corpus`, the cache file really was committed. Each bug lived in the branch nobody would spot-check, wearing the credibility of the branch everybody would.
+Note what they have in common: **in every case the happy path was genuinely fine.** F8 returned a refusal, `servedFrom` was right on `in_corpus`, the cache file really was committed, and `isRtlScript` was correct about the question it was actually asked. Each bug lived in the branch nobody would spot-check, wearing the credibility of the branch everybody would.
 
-The working rule, and it generalises the "check `reason`, not just `mode`" bullet above rather than sitting beside it: **anything that reports on our own state — a fixture status, a diagnostic field, a health field, an artifact's presence — needs a test per branch, including branches that are currently unreachable.**
+⚠️ **The fourth one sharpens the rule, because it had a guard and the guard was the problem.** F8, `servedFrom` and `demo-cache.json` were untested. `isRtlScript` was tested — deliberately, with a negative test, by someone thinking about exactly this failure mode — and the test **encoded the bug as the expected value** because it checked the primitive rather than the caller. So:
+
+> **A test on a primitive says nothing about the caller that misreads it.** "Is the character class correct?" and "does an English question render at English metrics?" are different questions, and only the second is the one anybody cares about. Test at the altitude of the observable behaviour, not at the altitude of the helper you happen to have just written.
+
+The working rule, and it generalises the "check `reason`, not just `mode`" bullet above rather than sitting beside it: **anything that reports on our own state — a fixture status, a diagnostic field, a health field, an artifact's presence, a rendering decision — needs a test per branch, at the level a user would notice, including branches that are currently unreachable.**
 
 #### ⚠️ The sharpest form: a DISABLED feature's failure modes are invisible because nothing exercises them
 
@@ -884,7 +889,7 @@ Every row states **what "complete" means**, so partial progress cannot quietly r
 | **5 — Urdu** | 🟡 **substantially done** | Bilingual end to end — detection, selection, answers, citations **and the whole shell** — with RTL correct on hardware | **Native-speaker register review (owner: the human, not the agent)** — including the open `معذرت`/`انکار` call flagged in `strings.ts`. RTL of the newest surfaces unverified on device |
 | **6 — Adversarial hardening** | 🟢 **done, with one case unconstructible** | `tests/adversarial.md` run **as one suite** before every router/prompt commit, every 🔴 case genuinely tested | 60 cases from a single source of truth (`tests/cases.ts`), document generated and drift-checked. 36 executable, **all covered by real fixtures**. G6 is unconstructible against corpus 1.0.0 — 0 of 154 entries have asymmetric language coverage — and is recorded as such, not skipped |
 | **7 — Deploy + demo rehearsal** | 🟢 **backend rehearsed** | Deployed **and rehearsed** — the demo run start to finish on the real APK against the real backend | ✅ 7-question paced run against the live deployment 2026-08-25: all four rubric behaviours correct in both languages, **every refusal for the right `reason`**, 13/13 citations valid, 0.4–7.4s. `demo-cache.json` built then **deliberately disabled** (§5.6) — a lever, not a deliverable. **Remaining: the same run through the APK on device** (the human's half) |
-| **8 — Submission** | 🟡 **in progress** | Repo public with a README, APK linked, screenshots and description uploaded | Judging is unattended (§12.6). Repo still **private and unpushed**; README written; reference images removed from git; arm64-only APK not yet rebuilt or smoke-tested |
+| **8 — Submission** | 🟡 **in progress** | Repo public with a README, APK linked, screenshots and description uploaded | Judging is unattended (§12.6). ✅ **arm64 APK built** — 29.2 MB, down from 82 MB, from commit `0f11f37`; ✅ README written; ✅ reference images out of git; ✅ pushed to `origin/main`, still **private**. Remaining: smoke test + screenshots (none captured yet — `docs/screenshots/` holds only its README, and the root README inlines two of them), then make public and cut the Release |
 | **Stretch — WhatsApp** | ⬜ | A second surface on the same core | Not started. Strictly a bonus, never at the cost of the primary surface (§6) |
 
 #### What the 2026-08-25 rehearsal found, and the one thing it did not settle
@@ -934,10 +939,18 @@ v2 *also* contained a **subtractive** sentence (*"Separate facts are not a routi
 
 1. **Phase 8 submission** — unattended judging means the repo, the README and the description *are* the pitch (§12.6). Nothing else matters if a judge never installs.
 2. **The rehearsal's other half** — the same run through the APK on a real device. The backend is proven; the surface is not.
-3. **arm64 APK rebuild + smoke test** — the universal build was 82 MB, which is real install friction; `buildArchs` cuts it, and a packaging change needs one install-and-launch check.
+3. **Smoke test the arm64 APK** — the rebuild is **done** (`buildArchs` cut 82 MB → 29.2 MB), but a packaging change still needs one install-and-launch check on hardware. Folds into item 2: it is the same install.
 4. **Urdu register review** — blocked on human judgement, not on code.
 
 ~~**`demo-cache.json`**~~ — ✅ built, then **switched off by choice** (§5.6). It is no longer a task; it is a flag to flip if quota bites during judging.
+
+#### ⚠️ The APK is distributed from a GitHub Release, NOT from the EAS artifact URL
+
+**EAS internal-distribution artifacts expire 14 days after the build.** The current one (build `98bbf486`, from `0f11f37`) dies **2026-08-29 22:23 UTC**. A submission whose only download link is an EAS URL therefore becomes a dead link *during* an unattended judging window — the failure lands on the judge, silently, at the one moment nobody is watching.
+
+**Rebuilding to reset the clock was considered and rejected: it restarts a timer instead of removing one.** Release assets do not expire, the Release is what the submission links anyway, and the README already points at `releases/latest` — which resolves correctly forever once one Release exists.
+
+**Consequence for any future rebuild: uploading a new APK to the Release is part of shipping it, not an afterthought.** The EAS URL is a build artifact, never a distribution channel.
 
 ---
 
@@ -1162,11 +1175,25 @@ Chip 4 exposed a rendering bug that was always there: the user's own echoed mess
 
 **Layout follows the shell; text follows the script.** Bubble side and tightened corner are properties of the surface and stay put; direction and metrics come from `isRtlScript`.
 
-🚫 **This is not language detection and does not reopen the `"he"` bug class (§5.4).** That bug was a weak roman-Urdu marker in *language* detection deciding an English question was Urdu. Script→direction cannot make that error: roman-Urdu is Latin script, so it renders LTR, which is what the user typed. Answer language is still decided server-side by `detectLanguage`, untouched.
+🚫 **This is not language detection and does not reopen the `"he"` bug class (§5.4).** That bug was a weak roman-Urdu marker in *language* detection deciding an English question was Urdu. Script dominance cannot make that error: roman-Urdu is Latin script, so it renders LTR, which is what the user typed. Answer language is still decided server-side by `detectLanguage`, untouched.
 
-⚠️ The character class is literal UTF-8, and **a broken class fails OPEN** — everything renders LTR, silently, invisible until someone looks at a device. `shell:check` reads the line back out of `theme.ts` and asserts six cases; the guard was itself verified by deliberately dropping the presentation-forms range and watching it fail.
+#### ❌ It was PRESENCE, and presence was wrong — fixed 2026-08-25, after shipping in the APK
 
-🚫 **Never reuse that character class to decide what LANGUAGE a string is in.** It answers *"does this contain Arabic script at all"*, which is exactly right for direction and exactly wrong for language — **ﷺ (U+FDFA) is in Arabic Presentation Forms-A, so every English title in this corpus matches it.** A rehearsal validator built on this class flagged all five English citations of a correct answer as script-mismatched: a false failure in the instrument, on a run whose whole purpose was checking the system, and briefly indistinguishable from a real §5.3 breach. Same class, right in `theme.ts` and wrong in a validator, because the questions differ. For language, compare against the corpus's own `en`/`ur` blocks — exact, and what §5.3 check 3 already does.
+~~`isRtlScript` asks whether the string contains any Arabic-script character.~~ **It now asks which script *dominates*.** The original shipped, and the failure it produced is the one this section was written to prevent.
+
+**ﷺ (U+FDFA) is in Arabic Presentation Forms-A, so any English sentence carrying the honorific answered "yes".** Two of the six chip strings do. Both rendered the judge's own English question at Urdu metrics — **fontSize 19 instead of 16, lineHeight 38 instead of 25, right-aligned, RTL** — sitting directly beside a bot bubble that was correctly 16/25. Including `exampleInCorpus.en`, which is the question behind the README's hero screenshot.
+
+⚠️ **The prohibition three paragraphs down already forbade exactly this, and the code did it anyway.** Read the reason it gave: *"roman-Urdu is Latin script, so it renders LTR, which is correct."* True, and it is an argument about **one** input class. Roman-Urdu was the failure mode we had been burned by, so it was the failure mode the prohibition imagined — and English-containing-ﷺ, which the corpus and our own chip strings are *full of*, was never considered at all.
+
+> **A prohibition that names one failure mode gets read as covering only that one.** The rule said "this is not language detection" and then justified it with a single case; whoever read it next checked their change against that case, found it fine, and shipped. State the rule, then say the cases are *examples and not the boundary* — otherwise the examples silently become the boundary.
+
+**A denylist excluding ﷺ was considered and rejected.** It fixes the one glyph we happened to notice and leaves every other script-neutral Arabic-range character free to reintroduce the same bug — a denylist is always one case behind, which is the same argument §5.6 makes about recording transient fixture failures. Dominance cannot fail that way: one honorific loses to the Latin around it, a lone `ﷺ` still reads RTL because nothing outvotes it. **Known and accepted:** a near-boundary mixed string can tip the wrong way. That input is genuinely ambiguous and the cost is metrics on one bubble — presence failed on the common case, dominance only on the rare one. Ties resolve to LTR.
+
+⚠️ **The guard asserted the bug was correct.** `shell:check` tested the character class in isolation and encoded `["mixed Latin + Arabic", "The Prophet ﷺ was born in 571 CE", true]` as expected — a true statement *about the class* and the exact broken behaviour *of the consumer*. It could never have caught this. **It now evaluates the real detection source and asserts the fontSize/lineHeight that reach the screen**, over all six chip strings plus ties and the regression case itself; verified by reverting to presence and watching exactly the three broken cases fail. Recorded in §5.6's table as the fourth instance.
+
+⚠️ The character class is now written with `\u` escapes rather than literal UTF-8 — inline UTF-8 has been mangled by tooling here before, and **a broken class fails OPEN**, everything rendering LTR, silently, invisible until someone looks at a device.
+
+🚫 **Never reuse that character class to decide what LANGUAGE a string is in.** It answers *"which script dominates"*, which is right for direction and metrics on text the user typed, and wrong for language. **ﷺ (U+FDFA) is in Arabic Presentation Forms-A, so every English title in this corpus contains Arabic script.** A rehearsal validator built on this class flagged all five English citations of a correct answer as script-mismatched: a false failure in the instrument, on a run whose whole purpose was checking the system, and briefly indistinguishable from a real §5.3 breach. Same class, right in `theme.ts` and wrong in a validator, because the questions differ. For language, compare against the corpus's own `en`/`ur` blocks — exact, and what §5.3 check 3 already does. **These are examples, not the boundary** — the rule is that this function answers a question about *script*, and anything needing a question about *language* must go elsewhere, whether or not its case appears above.
 
 **`scripts/shell-check.mjs` exists because `mobile/` is unreachable by both the typechecker and the test runner** — the API tsconfig excludes it and the runner globs `api/tests/*.test.ts`. Importing a mobile module from a test was tried and reverted: `module: nodenext` takes module kind from the nearest `package.json`, and adding `"type": "module"` to `mobile/package.json` to satisfy a test would change how Metro resolves the app. So these invariants are checked from outside, by reading the files as text.
 

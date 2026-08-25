@@ -79,60 +79,126 @@ console.log(`corpus.json  : ${total} entries (shamail ${corpus.counts.shamail}, 
 console.log(`emptyBody.en : ${en === null ? "(not found)" : en.includes(wantEn) ? `states ${wantEn} ✔` : `MISSING ${wantEn} ✗`}`);
 console.log(`emptyBody.ur : ${ur === null ? "(not found)" : ur.includes(wantUr) ? `states ${wantUr} ✔` : `MISSING ${wantUr} ✗`}`);
 
-/* ── 2. The RTL script class in theme.ts ────────────────────────────────────
+/* ── 2. What METRICS come out of theme.ts for a given string ────────────────
  *
- * `isRtlScript` decides text direction and metrics for the user's own echoed
- * message. It is a character class written as literal UTF-8, and inline UTF-8
- * has been mangled by tooling in this project already.
+ * ⚠️ THIS TESTS THE CONSUMER, NOT THE CHARACTER CLASS. That distinction is the
+ * whole reason this section was rewritten on 2026-08-25, and it is the fourth
+ * instance of "verification does not spread" (CLAUDE.md §5.6).
  *
- * A broken class fails OPEN: every string renders LTR, Urdu included, at
- * English metrics — losing the ﷺ leading fix (§12.0) on the one element that is
- * a verbatim echo of what the judge typed. Invisible until someone looks at a
- * device.
+ * The previous version evaluated the class in isolation and asserted:
  *
- * ⚠️ DO NOT REUSE `ARABIC_SCRIPT` TO DECIDE WHAT LANGUAGE A STRING IS IN.
+ *     ["mixed Latin + Arabic", "The Prophet ﷺ was born in 571 CE", true]
  *
- * It answers "does this contain Arabic script at all", which is the right
- * question for direction — an Urdu string always does, a roman-Urdu string
- * never does, and both render correctly as a result.
+ * That assertion was CORRECT about the class — the string does contain Arabic
+ * script — and it encoded the shipped bug as expected behaviour, so it could
+ * never catch it. `bodyStyleForText` consumed that yes/no as "this string is
+ * Urdu" and handed an English sentence Urdu metrics (19/38) and RTL. Two of the
+ * six chip strings carry ﷺ, so two of them rendered the judge's own English
+ * question oversized and right-aligned next to a correctly-sized bot bubble —
+ * including the one behind the README's hero screenshot.
  *
- * It is the WRONG question for "is this text in language X", and the
- * difference is not academic: ﷺ (U+FDFA) lives in Arabic Presentation Forms-A,
- * so **every English title in this corpus matches it**. A rehearsal validator
- * built on this class flagged all five English citations of a perfectly good
+ * A guard on a primitive proves nothing about the caller that misreads it. So
+ * this now runs the REAL detection source — the block between the rtl-detect
+ * markers in theme.ts, not a copy of its logic — and asserts the fontSize and
+ * lineHeight that actually reach the screen.
+ *
+ * ⚠️ STILL TRUE, AND STILL THE RULE: do not ask this what LANGUAGE a string is.
+ * It answers "which script dominates", which is right for direction and metrics
+ * on text the user typed, and wrong for language. A rehearsal validator built
+ * on the old class flagged all five English citations of a perfectly good
  * answer as script-mismatched — a false failure in the instrument, on a run
- * whose entire purpose was checking the system. The same class, correct here
- * and wrong there, because the questions differ.
- *
- * If you need the language of a string, compare it against the corpus's own
- * `en`/`ur` blocks. That is exact, and it is what §5.3 check 3 already does.
+ * whose entire purpose was checking the system. For language, compare against
+ * the corpus's own `en`/`ur` blocks, which is what §5.3 check 3 already does.
  */
-const classMatch = theme.match(/const ARABIC_SCRIPT = (\/\[[^\n]*?\]\/[a-z]*)\s*;/);
-if (!classMatch) {
-  failures.push("could not find the ARABIC_SCRIPT character class in mobile/src/theme.ts");
+// `chipText` is declared in section 3 below; function declarations hoist, so it
+// is callable here. The chip strings are read from strings.ts rather than
+// duplicated, so rewording a chip re-tests the new text automatically.
+const rtlBlock = theme.match(/rtl-detect:start[^\n]*\n([\s\S]*?)\/\/ ── rtl-detect:end/);
+// Read off the line rather than building a regex from a template literal: `\b`
+// inside a template literal is a BACKSPACE escape, not a word boundary, which
+// silently produced /body:s*{s*.../ and matched nothing. Regex literals below
+// are immune to that whole class of escaping error.
+const metricsOf = (key) => {
+  const line = theme.split("\n").find((l) => l.trim().startsWith(key + ":"));
+  if (!line) return null;
+  const size = line.match(/fontSize:\s*([\d.]+)/);
+  const height = line.match(/lineHeight:\s*([\d.]+)/);
+  return size && height ? { fontSize: +size[1], lineHeight: +height[1] } : null;
+};
+const EN_METRICS = metricsOf("body");
+const UR_METRICS = metricsOf("bodyUr");
+
+if (!rtlBlock) {
+  failures.push("could not find the rtl-detect block in mobile/src/theme.ts");
+} else if (!EN_METRICS || !UR_METRICS) {
+  failures.push("could not read type.body / type.bodyUr metrics from mobile/src/theme.ts");
 } else {
-  let re = null;
+  // Strip TS so the real source can be evaluated as JS. If this strip ever
+  // fails to produce a working function the constructor throws, which is loud —
+  // it cannot degrade into silently testing nothing.
+  let isRtlScript = null;
   try {
-    re = new RegExp(classMatch[1].slice(1, classMatch[1].lastIndexOf("/")));
+    const js = rtlBlock[1]
+      .replace(/\bexport\s+/g, "")
+      .replace(/:\s*(string|RegExp|number|boolean)\b/g, "");
+    isRtlScript = new Function(`${js}\nreturn isRtlScript;`)();
+    if (typeof isRtlScript !== "function") throw new Error("isRtlScript is not a function");
   } catch (e) {
-    failures.push(`ARABIC_SCRIPT does not compile: ${e.message}`);
+    failures.push(`the rtl-detect block does not evaluate: ${e.message}`);
+    isRtlScript = null;
   }
-  if (re) {
-    // Roman-Urdu MUST be false. This is script detection, not language
-    // detection — the `"he"` bug class (§5.4) lived in the latter, and the two
-    // must not be conflated back together.
+
+  if (isRtlScript) {
+    // Roman-Urdu MUST resolve to English metrics. This is script detection, not
+    // language detection — the `"he"` bug class (§5.4) lived in the latter, and
+    // the two must not be conflated back together.
     const cases = [
-      ["Urdu script", "حضور ﷺ کا اخلاق کیسا تھا؟", true],
-      ["bare ﷺ ligature (U+FDFA)", "ﷺ", true],
-      ["mixed Latin + Arabic", "The Prophet ﷺ was born in 571 CE", true],
-      ["English", "What was his character like?", false],
-      ["roman-Urdu", "huzoor ka akhlaq kaisa tha", false],
-      ["roman-Urdu ruling phrasing", "kya jaiz hai", false],
+      // All six chip strings. Two of these were wrong and nothing noticed.
+      ["chip exampleInCorpus.en", chipText("exampleInCorpus", "en"), "en"],
+      ["chip exampleOutOfCorpus.en", chipText("exampleOutOfCorpus", "en"), "en"],
+      ["chip exampleRuling.en", chipText("exampleRuling", "en"), "en"],
+      ["chip exampleInCorpus.ur", chipText("exampleInCorpus", "ur"), "ur"],
+      ["chip exampleOutOfCorpus.ur", chipText("exampleOutOfCorpus", "ur"), "ur"],
+      ["chip exampleRuling.ur", chipText("exampleRuling", "ur"), "ur"],
+      // The regression case itself, now asserting the opposite of what the old
+      // guard asserted. If this ever flips back to `ur`, presence has returned.
+      ["English + ﷺ honorific", "The Prophet ﷺ was born in 571 CE", "en"],
+      ["bare ﷺ ligature (U+FDFA)", "ﷺ", "ur"],
+      ["Urdu with a Latin name", "کیا حضور ﷺ نے Makkah میں یہ فرمایا؟", "ur"],
+      ["English, no honorific", "What was his character like?", "en"],
+      ["roman-Urdu", "huzoor ka akhlaq kaisa tha", "en"],
+      ["roman-Urdu ruling phrasing", "kya jaiz hai", "en"],
+      // Ties resolve to LTR. Digits and punctuation are script-neutral and must
+      // not vote, so neither of these has a majority either way.
+      ["empty string (tie → LTR)", "", "en"],
+      ["digits only (tie → LTR)", "1445 / 571", "en"],
     ];
+
+    console.log("\nmetrics chosen for user-authored text:");
     for (const [name, sample, want] of cases) {
-      const got = re.test(sample);
-      console.log(`  ${got === want ? "✔" : "✗"} ${name.padEnd(28)} rtl=${got}`);
-      if (got !== want) failures.push(`ARABIC_SCRIPT: ${name} should be rtl=${want}, got ${got}`);
+      if (sample === null) {
+        failures.push(`could not read the chip string for ${name} from strings.ts`);
+        continue;
+      }
+      const got = isRtlScript(sample) ? "ur" : "en";
+      const m = got === "ur" ? UR_METRICS : EN_METRICS;
+      const ok = got === want;
+      console.log(`  ${ok ? "✔" : "✗"} ${name.padEnd(28)} ${got} ${m.fontSize}/${m.lineHeight}`);
+      if (!ok) {
+        const wm = want === "ur" ? UR_METRICS : EN_METRICS;
+        failures.push(
+          `${name} should render at ${want} metrics (${wm.fontSize}/${wm.lineHeight}), got ${got} (${m.fontSize}/${m.lineHeight})`
+        );
+      }
+    }
+
+    // The two character classes carry /g. `String.prototype.match` resets
+    // lastIndex, but `RegExp.test` does not — so if anyone switches this to
+    // .test() the answer starts alternating per call. Cheap to pin, and the
+    // symptom would otherwise be a bubble that renders differently on re-render.
+    const twice = "حضور ﷺ کا اخلاق کیسا تھا؟";
+    if (isRtlScript(twice) !== isRtlScript(twice)) {
+      failures.push("isRtlScript is not stable across calls — a /g regex is holding lastIndex");
     }
   }
 }
@@ -236,4 +302,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`\nshell:${check ? "check" : "report"} ok — the app's corpus claim and its RTL class both hold.`);
+console.log(`\nshell:${check ? "check" : "report"} ok — the app's corpus claim holds and every chip renders at the right metrics.`);

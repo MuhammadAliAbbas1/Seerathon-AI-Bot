@@ -64,7 +64,7 @@ export const dashedCard = {
 export const isUr = (lang: string) => lang === "ur";
 
 /**
- * Does this string contain Arabic-script characters?
+ * Which script DOMINATES this string?
  *
  * ⚠️ This is SCRIPT detection, not language detection, and the distinction is
  * the whole point. It exists for one job: rendering text the user typed
@@ -77,24 +77,55 @@ export const isUr = (lang: string) => lang === "ur";
  * of their input. The same was true, unseen, for anyone typing Urdu under an
  * English shell.
  *
+ * ⚠️ DOMINANCE, NOT PRESENCE — and the difference was a shipped bug (§12.6).
+ *
+ * This asked "does the string contain ANY Arabic-script character" until
+ * 2026-08-25. ﷺ (U+FDFA) lives in Arabic Presentation Forms-A, so **every
+ * English string carrying the honorific answered yes** — including two of the
+ * four landing-screen chips, which rendered the judge's own English question
+ * right-aligned at Urdu metrics, 19/38 instead of 16/25, directly beside a bot
+ * bubble that was correctly 16/25.
+ *
+ * A denylist excluding ﷺ was considered and rejected: it fixes the one glyph
+ * we noticed and leaves every other script-neutral Arabic-range character to
+ * reintroduce the same bug. Counting which script actually dominates cannot
+ * have that shape of failure — one honorific in an English sentence loses to
+ * the Latin letters around it, and a lone `ﷺ` still reads as RTL because
+ * nothing outvotes it.
+ *
+ * Known and accepted: a near-boundary mixed string (an Urdu question wrapped
+ * around a long Latin quotation) can tip to LTR. At the margin either answer
+ * is defensible, the input is genuinely ambiguous, and the cost is metrics on
+ * one bubble. Presence failed on the *common* case; dominance fails only on
+ * the rare ambiguous one.
+ *
  * 🚫 This does NOT reintroduce the `"he"` bug class (§5.4). That bug was a weak
  * roman-Urdu marker in LANGUAGE detection deciding an English question was
- * Urdu. Script→direction cannot make that error: roman-Urdu is Latin script,
+ * Urdu. Script dominance cannot make that error: roman-Urdu is Latin script,
  * so it renders LTR here, which is correct — it is what the user typed. Answer
  * language is still decided server-side by `detectLanguage`, untouched.
- *
- * Ranges: Arabic, Arabic Supplement, Arabic Presentation Forms-A/B (which is
- * where ﷺ, U+FDFA, lives).
  */
-// ⚠️ This class is written as literal characters, and inline UTF-8 has been
-// mangled by tooling once already in this project. A broken class here fails
-// OPEN — every string would render LTR — which is silent, and invisible until
-// someone looks at a device. `npm run shell:check` reads this line back out and
-// asserts the six cases that matter, so the breakage is loud instead. That
-// guard was itself verified by deliberately dropping the presentation-forms
-// range and watching it fail.
-const ARABIC_SCRIPT = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/;
-export const isRtlScript = (text: string) => ARABIC_SCRIPT.test(text);
+// ⚠️ Written with \u escapes, NOT literal characters. Inline UTF-8 has been
+// mangled by tooling once already in this project, and the previous literal
+// class failed OPEN when broken — every string rendering LTR, silently, and
+// invisible until someone looked at a device. Escapes cannot be mangled that
+// way. `npm run shell:check` evaluates the block between the markers below —
+// the real source, not a copy — and asserts what METRICS come out per string,
+// including each of the four chips.
+//
+// Ranges: Arabic, Arabic Supplement, Arabic Presentation Forms-A/B (where ﷺ,
+// U+FDFA, lives). LTR counts Latin letters only: digits and punctuation are
+// script-neutral and must not vote.
+// ── rtl-detect:start ────────────────────────────────────────────────────────
+const RTL_CHARS = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/g;
+const LTR_CHARS = /[A-Za-z]/g;
+
+const countMatches = (text: string, re: RegExp) => (text.match(re) || []).length;
+
+/** True when Arabic-script characters OUTNUMBER Latin ones. Ties → LTR. */
+export const isRtlScript = (text: string) =>
+  countMatches(text, RTL_CHARS) > countMatches(text, LTR_CHARS);
+// ── rtl-detect:end ──────────────────────────────────────────────────────────
 
 /**
  * Body text style chosen by the string's own SCRIPT rather than by a language
